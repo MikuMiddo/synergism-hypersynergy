@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.10.6a-dev7',
+        currentModVersion: '2.10.6a-dev8',
         isLatestVersion: true,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
@@ -477,7 +477,7 @@ export const HSGlobal: IHSGlobal = class {
             }],
         ]),
 
-        idleSwapQuickIconUrl: 'https://synergism.cc/Pictures/Default/OcteractBlueberries.png',
+        idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
         idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
         idleSwapMaxBlueTreshold: 97,
         idleSwapMinBlueTreshold: 3,
