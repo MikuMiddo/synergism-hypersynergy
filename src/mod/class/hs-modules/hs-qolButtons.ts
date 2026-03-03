@@ -19,8 +19,8 @@ type SelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: SelectorExpectation };
 type SelectorVisibilityMode = 'self' | 'parent' | 'none';
 type QuickbarRenderKey =
-    | 'BuildingsAndUpgrades'
     | 'AutoChallenge'
+    | 'BuildingsAndUpgrades'
     | 'Rune'
     | 'Research'
     | 'AutoAntSacrifice'
@@ -33,6 +33,7 @@ type SynQuickbarConfig = {
     actionDOM: string;
     checks: readonly AutomationSelectorSpec[];
     selectorVisibility?: SelectorVisibilityMode;
+    hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
     iconSrc: string;
@@ -43,6 +44,7 @@ type GroupQuickbarConfig = {
     kind: 'group';
     selectors: readonly AutomationSelectorSpec[];
     selectorVisibility?: SelectorVisibilityMode;
+    hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
     iconSrc: string;
@@ -109,6 +111,7 @@ export class HSQOLButtons extends HSModule {
     ];
 
     private static readonly researchSelectors = [
+        { selector: '#toggleresearchbuy', expected: 'Upgrade: MAX [if possible]' },
         { selector: '#toggleautoresearch', expected: 'Automatic: ON' },
         { selector: '#toggleautoresearchmode', expected: 'Automatic mode: Cheapest' },
     ] as const satisfies readonly AutomationSelectorSpec[];
@@ -135,10 +138,12 @@ export class HSQOLButtons extends HSModule {
 
     /**
      * Quickbar visibility rules:
-      * - Any toggle with `minHighestSingularityCount` is shown based on threshold only.
-      * - Other toggles are shown only when at least one linked selector is visible in DOM
-      *   (DOM-only check via inline `style.display`).
-      * - Per-toggle visibility target is configurable via `selectorVisibility`.
+        * - Any toggle with `minHighestSingularityCount` is shown based on threshold only.
+        * - Other toggles are shown only when at least one linked selector is visible in DOM
+        *   (DOM-only check via inline `style.display`).
+        * - Per-toggle visibility target is configurable via `selectorVisibility`.
+        * - Optional `hideWhenFullyEnabledMinHighestSingularityCount` hides already-fully-on
+        *   toggles once the requested singularity threshold is reached.
      */
     private static readonly QUICKBAR_CONFIG = {
         AutoChallenge: {
@@ -152,6 +157,7 @@ export class HSQOLButtons extends HSModule {
         BuildingsAndUpgrades: {
             kind: 'group',
             selectors: HSQOLButtons.buildingsAndUpgradesSelectors,
+            hideWhenFullyEnabledMinHighestSingularityCount: 25,
             buttonId: 'automationQuickBar-buildings',
             label: 'Buildings and Upgrades',
             iconSrc: './Pictures/Simplified/Coin.png'
@@ -160,13 +166,13 @@ export class HSQOLButtons extends HSModule {
             kind: 'group',
             selectors: HSQOLButtons.runeSelectors,
             buttonId: 'automationQuickBar-runes',
-            label: 'Rune',
+            label: 'Runes',
             iconSrc: './Pictures/Simplified/Offering.png'
         },
         Research: {
-            kind: 'syn',
-            actionDOM: '#toggleautoresearch',
-            checks: HSQOLButtons.researchSelectors,
+            kind: 'group',
+            selectors: HSQOLButtons.researchSelectors,
+            hideWhenFullyEnabledMinHighestSingularityCount: 11,
             buttonId: 'automationQuickBar-research',
             label: 'Research',
             iconSrc: './Pictures/Simplified/Obtainium.png'
@@ -177,7 +183,7 @@ export class HSQOLButtons extends HSModule {
             checks: [{ selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: ON' }],
             selectorVisibility: 'parent',
             buttonId: 'automationQuickBar-autoantsacrifice',
-            label: 'Auto Ant-Sacrifice',
+            label: 'Auto-Sacrifice',
             iconSrc: './Pictures/Simplified/AntSacrifice.png'
         },
         Cube: {
@@ -251,7 +257,7 @@ export class HSQOLButtons extends HSModule {
         attributeFilter: ['style', 'class', 'aria-pressed', 'aria-checked']
     };
 
-    private static readonly AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS = [50, 150, 400, 1000] as const;
+    private static readonly AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS = [50, 150, 500, 1000, 2000] as const;
 
 
     /** Resolve a syn UI element by selector, falling back to window globals for cube upgrade toggles. */
@@ -279,8 +285,6 @@ export class HSQOLButtons extends HSModule {
             if (ariaChecked === 'true') return true;
 
             const text = (el.textContent || '').trim();
-            if (/Auto\s*:\s*ON/i.test(text)) return true;
-            if (/Auto\s*:\s*OFF/i.test(text)) return false;
             if (/Auto\s+Open\s*\[OFF\]/i.test(text)) return false;
             if (/Auto\s+Open\s*\[(ON|OFF)\]/i.test(text)) return /\[ON\]/i.test(text);
             if (/Auto\s+Open\s*"?\d+%"?/i.test(text)) return true;
@@ -382,10 +386,25 @@ export class HSQOLButtons extends HSModule {
     }
 
     private shouldApplySelectorVisibility(config: QuickbarToggleConfig): boolean {
+        // Threshold-gated toggles are shown/hidden only by singularity count.
         if (config.minHighestSingularityCount !== undefined) {
             return false;
         }
         return config.selectorVisibility !== 'none';
+    }
+
+    private shouldHideQuickbarWhenFullyEnabled(
+        config: QuickbarToggleConfig,
+        highestSingularityCount: number,
+        isFullyEnabled: boolean
+    ): boolean {
+        // Optional QoL rule: hide completed toggles after a progression threshold.
+        const minSingularity = config.hideWhenFullyEnabledMinHighestSingularityCount;
+        if (minSingularity === undefined || !isFullyEnabled) {
+            return false;
+        }
+
+        return highestSingularityCount >= minSingularity;
     }
 
     private getVisibilityTargetElement(el: HTMLElement | null, config: QuickbarToggleConfig): HTMLElement | null {
@@ -669,6 +688,15 @@ export class HSQOLButtons extends HSModule {
                     }).filter((state): state is boolean => state !== null);
 
                     const enabled = checkStates.length > 0 && checkStates.every(Boolean);
+
+                    if (this.shouldHideQuickbarWhenFullyEnabled(config, highestSingularityCount, enabled)) {
+                        btn.style.display = 'none';
+                        btn.classList.remove('enabled', 'mixed');
+                        btn.classList.add('disabled');
+                        btn.disabled = true;
+                        return;
+                    }
+
                     btn.classList.remove('enabled', 'disabled', 'mixed');
                     btn.classList.add(enabled ? 'enabled' : 'disabled');
                     btn.disabled = checkStates.length === 0;
@@ -696,6 +724,14 @@ export class HSQOLButtons extends HSModule {
                 btn.style.display = meetsSingularityRequirement && hasVisibleLinkedTarget ? '' : 'none';
 
                 if (!meetsSingularityRequirement || !hasVisibleLinkedTarget) {
+                    btn.classList.remove('enabled', 'mixed');
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                    return;
+                }
+
+                if (this.shouldHideQuickbarWhenFullyEnabled(config, highestSingularityCount, allOn)) {
+                    btn.style.display = 'none';
                     btn.classList.remove('enabled', 'mixed');
                     btn.classList.add('disabled');
                     btn.disabled = true;
@@ -881,6 +917,8 @@ export class HSQOLButtons extends HSModule {
     #scheduleAutomationQuickbarBootstrapRetries(updateUI: () => void): void {
         this.#clearAutomationQuickbarBootstrapTimeouts();
 
+        // Some automation elements mount late during view initialization.
+        // Retry watcher binding and one refresh pass a few times after setup.
         for (const delayMs of HSQOLButtons.AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS) {
             const timeoutId = window.setTimeout(() => {
                 if (!this.automationQuickBarContainer) return;
@@ -890,16 +928,6 @@ export class HSQOLButtons extends HSModule {
 
             this.#automationQuickbarBootstrapTimeoutIds.push(timeoutId);
         }
-    }
-
-    // Public API for settings action
-    showAutomationQuickBar(): void {
-        // No-op: quickbar is now managed by HSQuickbarManager
-    }
-
-    // Deprecated: hideAutomationQuickBar is now managed by HSQuickbarManager
-    hideAutomationQuickBar(): void {
-        // No-op: quickbar is now managed by HSQuickbarManager
     }
 
     observe() {
