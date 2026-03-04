@@ -1316,14 +1316,12 @@ export class HSQOLButtons extends HSModule {
             if (!gameData) return;
 
             const totalGQ = gameData.goldenQuarks;
-            let totalRatio = 0;
             const ratios: { [key: string]: number } = {};
 
             for (const id in inputs) {
                 const val = parseFloat(inputs[id].value) || 0;
                 if (val > 0) {
                     ratios[id] = val;
-                    totalRatio += val;
                 }
             }
 
@@ -1340,20 +1338,94 @@ export class HSQOLButtons extends HSModule {
                 }
             }
 
-            if (totalRatio === 0) return;
-
             if (!promptInput || !okPrompt || !okAlert) return;
+
+            const ids = Object.keys(ratios);
+            if (ids.length === 0) return;
+            const gqBudget = Math.max(0, Math.floor(totalGQ));
+            const weightEntries = ids.map((id) => {
+                const weight = ratios[id] ?? 0;
+                const upgradeData = gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey];
+                const invested = Math.max(0, upgradeData?.goldenQuarksInvested ?? 0);
+                return { id, weight, invested };
+            }).filter(entry => entry.weight > 0);
+
+            if (weightEntries.length === 0 || gqBudget <= 0) return;
+
+            // Cumulative target allocation:
+            // choose final invested totals so that each upgrade tracks its weight ratio,
+            // while never reducing upgrades that are already over target.
+            const targetTotalInvested = weightEntries.reduce((sum, entry) => sum + entry.invested, 0) + gqBudget;
+            let activeIndices = weightEntries.map((_, idx) => idx);
+            let activeWeightSum = weightEntries.reduce((sum, entry) => sum + entry.weight, 0);
+            let inactiveInvestedSum = 0;
+
+            while (activeIndices.length > 0 && activeWeightSum > 0) {
+
+                const lambda = (targetTotalInvested - inactiveInvestedSum) / activeWeightSum;
+                const newlyInactive = activeIndices.filter(idx => weightEntries[idx].invested > lambda * weightEntries[idx].weight);
+
+                if (newlyInactive.length === 0) break;
+                const newlyInactiveSet = new Set<number>(newlyInactive);
+                for (const idx of newlyInactive) {
+                    inactiveInvestedSum += weightEntries[idx].invested;
+                    activeWeightSum -= weightEntries[idx].weight;
+                }
+                activeIndices = activeIndices.filter(idx => !newlyInactiveSet.has(idx));
+            }
+
+            const activeSet = new Set<number>(activeIndices);
+            const lambda = activeWeightSum > 0
+                ? (targetTotalInvested - inactiveInvestedSum) / activeWeightSum
+                : 0;
+
+            const exactAdditional = weightEntries.map((entry, idx) => {
+                const targetFinalInvested = activeSet.has(idx)
+                    ? Math.max(entry.invested, lambda * entry.weight)
+                    : entry.invested;
+                const additional = Math.max(0, targetFinalInvested - entry.invested);
+                return {
+                    id: entry.id,
+                    exactAdditional: additional,
+                    floorAdditional: Math.floor(additional),
+                    fraction: additional - Math.floor(additional)
+                };
+            });
+
+            const floorTotal = exactAdditional.reduce((sum, entry) => sum + entry.floorAdditional, 0);
+            let remaining = Math.max(0, gqBudget - floorTotal);
+            const byFractionDesc = [...exactAdditional].sort((a, b) => b.fraction - a.fraction);
+            for (let i = 0; i < byFractionDesc.length && remaining > 0; i++) {
+                byFractionDesc[i].floorAdditional += 1;
+                remaining -= 1;
+            }
+
+            const plannedSpendById = new Map<string, number>(
+                exactAdditional.map(entry => [entry.id, entry.floorAdditional])
+            );
+            const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
+
+            HSLogger.debug(
+                `[HSQOLButtons][GQDistributor] budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
+                    ids.map(id => ({
+                        id,
+                        weight: ratios[id] ?? 0,
+                        invested: Math.max(0, gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0),
+                        spend: plannedSpendById.get(id) ?? 0
+                    }))
+                )}`,
+                this.context
+            );
 
             distributeBtn.disabled = true;
             distributeBtn.style.opacity = '0.6';
             distributeBtn.style.cursor = 'not-allowed';
 
-            const ids = Object.keys(ratios);
             let current = 0;
 
-            for (const id in ratios) {
+            for (const id of ids) {
                 current++;
-                const amountToSpend = Math.floor(totalGQ * (ratios[id] / totalRatio));
+                const amountToSpend = plannedSpendById.get(id) ?? 0;
                 setStatus(`Buying ${current}/${ids.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
 
                 if (amountToSpend <= 0) { setStatus(`Skipped ${current}/${ids.length} (0 GQ)`); continue; }
