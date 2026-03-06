@@ -151,17 +151,15 @@ export class HSSettings extends HSModule {
                             HSSettings.#settingDisabledString
                         );
                         break;
+                    case 'button':
+                        (HSSettings.#settings as any)[key] = new HSButtonSetting(
+                            setting as unknown as HSSettingBase<null>,
+                            settingAction,
+                            HSSettings.#settingEnabledString,
+                            HSSettings.#settingDisabledString
+                        );
+                        break;
                     default:
-                        // Fallback for types not in HSSettingJSONType (e.g., button)
-                        if ((setting as any).settingType === 'button') {
-                            (HSSettings.#settings as any)[key] = new HSButtonSetting(
-                                setting as unknown as HSSettingBase<null>,
-                                settingAction,
-                                HSSettings.#settingEnabledString,
-                                HSSettings.#settingDisabledString
-                            );
-                            break;
-                        }
                         throw new Error(`Could not parse setting ${key.toString()} (settingType: ${setting.settingType}, settingValue: ${setting.settingValue})`);
                 }
             }
@@ -1031,7 +1029,7 @@ export class HSSettings extends HSModule {
             return;
         }
         const strategyName = selectedOption.value.toString();
-        
+
         // First try to find the strategy in memory (including defaults),
         // then try loading from storage if it's a default strategy that isn't in memory yet
         let strategy = HSSettings.getStrategies().find(s => s.strategyName === strategyName);
@@ -1073,7 +1071,7 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static async importStrategy(migrateSpecialActionIds: boolean = false){
+    static async importStrategy(migrateSpecialActionIds: boolean = false) {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (uiMod) {
             const modalId = await uiMod.Modal({
@@ -1374,9 +1372,9 @@ export class HSSettings extends HSModule {
     // Migrates old action IDs to new ones or vice versa
     static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, oldToNewOnly: boolean = false): HSAutosingStrategy {
         const oldToNewActionIds: Record<number, number> = {
-            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402, 
-            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212, 
-            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605, 
+            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
+            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
+            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
             306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902
         };
         const newToOldActionIds = Object.fromEntries(
@@ -1402,13 +1400,13 @@ export class HSSettings extends HSModule {
         let map: Record<number, number> | null = null;
         if (oldCount > newCount) {
             map = oldToNewActionIds;
-        } else if (oldToNewOnly){
+        } else if (oldToNewOnly) {
             HSLogger.debug(`Strategy "${strategy.strategyName}" is already using the new SA IDs.`, 'HSSettings');
             return strategy;
         } else {
             map = newToOldActionIds;
         }
-        
+
         // Migrate
         const migrateChallenge = (challenge: any) => {
             if (challenge.challengeNumber && map![challenge.challengeNumber]) {
@@ -1455,6 +1453,17 @@ export class HSSettings extends HSModule {
 
             if (loadedSettings) {
                 HSLogger.log(`<green>Found settings from localStorage!</green>`, this.context);
+
+                // Ensure autosing doesn't auto-start on page reload by forcing
+                // the stored `startAutosing` flag to false. This prevents a
+                // persisted enabled value from triggering Auto-Sing on load.
+                try {
+                    if ((loadedSettings as any).startAutosing && typeof (loadedSettings as any).startAutosing === 'object') {
+                        (loadedSettings as any).startAutosing.enabled = false;
+                    }
+                } catch (e) {
+                    HSLogger.warn(`Failed to force startAutosing disabled: ${e}`, this.context);
+                }
 
                 // Process each top-level key that exists in defaultSettings (A)
                 Object.keys(defaultSettings).forEach(topLevelKey => {

@@ -128,14 +128,18 @@ export class HSAutosingGameSettingsFixer extends HSModule {
     /**
      * Initialize the fixer: ensure toggles, percent elements, and text fields are correct.
      */
-    async init(): Promise<void> {
-        HSLogger.log('[HSAutosing] User Settings Fixer - Starting', this.context);
+
+
+    /**
+     * Public API to run all setting fixes. Can be invoked repeatedly without
+     * reconstructing the fixer instance.
+     */
+    public async fixAllSettings(): Promise<void> {
         await this.ensureAllTogglesOn();
         await this.ensurePercentSuffixElements();
         await this.ensureGreenButtons();
         await this.ensureChallengeAutoStates();
         await this.ensureNumberInputFields();
-        HSLogger.log('[HSAutosing] User Settings Fixer - Completed', this.context);
     }
 
     /**
@@ -251,7 +255,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
             }
             return current === String(expected);
         };
-        
+
         for (const req of requirements) {
             HSLogger.debug(`[HSAutosing] ensureNumberInputFields: processing selector='${req.selector}' expected='${req.expected}'`, this.context);
             const expectedStr = String(req.expected);

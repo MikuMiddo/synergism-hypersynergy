@@ -145,13 +145,9 @@ export class HSAmbrosia extends HSModule
             HSElementHooker.HookElement('header')
         ]);
         this.#ambrosiaGrid = ambrosiaGrid;
-        HSLogger.debug('[HSAmbrosia]: #ambrosiaGrid hooked', this.context);
         this.#loadOutsSlots = loadOutsSlots;
-        HSLogger.debug(`[HSAmbrosia]: #loadOutsSlots hooked, count=${this.#loadOutsSlots.length}`, this.context);
         this.#loadOutContainer = loadOutContainer;
-        HSLogger.debug(`[HSAmbrosia]: #loadOutContainer hooked: ${!!this.#loadOutContainer}`, this.context);
         this.#pageHeader = pageHeader;
-        this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
 
         // 2. Setup drag/drop for ambrosia icons and loadout slots, and ensure the Ambrosia section is registered in the quickbar manager
         for (const [id, icon] of HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.entries()) {
@@ -170,25 +166,7 @@ export class HSAmbrosia extends HSModule
             }
         }
 
-        // 3. Ensure group wrapper exists and is last child of #quickbarsRow
-        if (this.#pageHeader) {
-            const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
-            let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
-            if (!groupWrapper) {
-                groupWrapper = document.createElement('div');
-                groupWrapper.id = 'hs-ambrosia-group-wrapper';
-                groupWrapper.style.display = 'flex';
-                groupWrapper.style.flexDirection = 'column';
-                quickbarsRow.appendChild(groupWrapper);
-            } else {
-                // Move to last child if not already
-                if (quickbarsRow.lastChild !== groupWrapper) {
-                    quickbarsRow.appendChild(groupWrapper);
-                }
-            }
-        }
-
-        // 4. Register Ambrosia section factory to return group wrapper
+        // 3. Register Ambrosia section factory to return group wrapper
         HSQuickbarManager.getInstance().removeSection('ambrosia');
         HSQuickbarManager.getInstance().registerSection('ambrosia', () => {
             HSLogger.debug('[HSAmbrosia]: Ambrosia section factory called', this.context);
@@ -210,7 +188,7 @@ export class HSAmbrosia extends HSModule
         });
         HSQuickbarManager.getInstance().injectSection('ambrosia');
 
-        // 5. Continue with normal setup
+        // 4. Continue with normal setup
         this.loadState();
         await this.#injectImportFromClipboardButton();
         this.#setupLoadoutContainerEvents();
@@ -347,9 +325,9 @@ export class HSAmbrosia extends HSModule
                 const iconEnum = this.#getIconEnumById(e.dataTransfer.getData('hs-amb-drag'));
                 const slotElement = e.target as HTMLButtonElement;
 
-console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
-console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
-console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+                console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+                console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+                console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
 
                 // Use dataset.originalId if present, else fallback to id
                 const slotElementId = slotElement.dataset.originalId || slotElement.id;
@@ -419,7 +397,7 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
         const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
         if (!groupWrapper) {
             HSLogger.warn('Could not find group wrapper for minibars', this.context);
-            return; 
+            return;
         }
         const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
         if (barWrapper) {
@@ -1286,6 +1264,8 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
                 this.#isIdleSwapEnabled = true;
                 this.#maybeInsertIdleLoadoutIndicator();
                 this.subscribeGameDataChanges();
+                // Update quick access button to reflect enabled state
+                this.updateIdleSwapQuickAccessButton(true);
             }
         } else {
             HSLogger.warn('HSAmbrosia.enableIdleSwap() - gameStateMod==undefined', 'hs-enable-idleswap-gamestate');
@@ -1316,6 +1296,32 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
         }
 
         this.#removeIdleLoadoutIndicator();
+        // Update quick access button to reflect disabled state
+        this.updateIdleSwapQuickAccessButton(false);
+    }
+
+    /**
+     * Update the quick access button label for the Ambrosia Idle Swap toggle.
+     * If `enabled` is omitted, uses the module's internal state.
+     */
+    public updateIdleSwapQuickAccessButton(enabled?: boolean): void {
+        const state = enabled ?? this.#isIdleSwapEnabled;
+        const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]') as HTMLButtonElement | null;
+        if (!quickMenuBtn) return;
+        const stateHtml = state
+            ? '<span style="color: #4caf50; font-weight: bold;">ON</span>'
+            : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
+        quickMenuBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [${stateHtml}]`;
+
+        // Notify user of toggle state
+        try {
+            HSUI.Notify(`Ambrosia AFK Swapper toggled ${state ? 'ON' : 'OFF'}.`, {
+                position: 'top',
+                notificationType: 'default'
+            });
+        } catch (e) {
+            /* ignore notification errors */
+        }
     }
 
     #gameStateCallbackMain(previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) {
@@ -1364,13 +1370,20 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
     }
 
     async #handleQuickImport() {
+        // Quick Import invoked
         let previouslyActiveSlot: HTMLButtonElement | null = null;
+        let text: string | undefined;
+        let importedCount = 0;
+        let skippedCount = 0;
+        let failures: { index: number; reason: string }[] = [];
         try {
             previouslyActiveSlot = document.querySelector(
                 '.blueberryLoadoutSlot.hs-ambrosia-active-slot'
             ) as HTMLButtonElement | null;
+            // previous active slot logged only on error
 
-            const text = await navigator.clipboard.readText();
+            text = await navigator.clipboard.readText();
+            // clipboard length hidden
 
             if (!text || typeof text !== 'string') {
                 HSUI.Notify('Clipboard does not contain valid loadout data', {
@@ -1381,6 +1394,7 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
 
             // Split clipboard by lines
             const lines = text.split('\n').map(line => line.trim());
+            // parsed clipboard lines
 
             // Validate we have between 1 and 16 loadouts
             if (lines.length === 0 || lines.length > 16) {
@@ -1403,50 +1417,163 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
 
             // Check if we're in SAVE mode and switch to LOAD mode
             const currentMode = modeToggle.innerText;
+            // blueberry toggle state
 
             // If the current mode is SAVE, we need to switch to LOAD mode
             // This is so that the user never accidentally saves a loadout when using the quickbar
             if (currentMode.includes('LOAD ')) {
+                // switched blueberry mode to LOAD
                 modeToggle.click();
             }
 
-            let importedCount = 0;
-            let skippedCount = 0;
-
-            HSUtils.startDialogWatcher();
+            importedCount = 0;
+            skippedCount = 0;
 
             // Use dynamic slot resolution
             const loadOutsSlots = this.#loadOutsSlots;
+
+            failures = [];
+
+            // starting loadout import loop
             for (let i = 0; i < lines.length; i++) {
                 const loadoutData = lines[i];
+                // per-line processing
                 // Skip empty lines
                 if (!loadoutData) {
                     skippedCount++;
+                    // skipped empty line
                     continue;
                 }
+
                 // Use dynamic slot element
                 const loadoutBtn = loadOutsSlots[i] as HTMLButtonElement;
                 if (!loadoutBtn) {
                     HSLogger.warn(`[HSAmbrosia] Loadout slot element for index ${i} not found`, this.context);
+                    // no slot element for index
                     continue;
                 }
+
                 const blob = new Blob([loadoutData], { type: 'application/json' });
                 const file = new File([blob], 'quick-import.json', { type: 'application/json' });
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
                 fileInput.files = dataTransfer.files;
+                // file input set and dispatched
                 const event = new Event('change', { bubbles: true });
                 fileInput.dispatchEvent(event);
-                await HSUtils.sleep(50);
+
+                // Wait for the import alert (the game shows an alert after file selection).
+                // If the alert appears but its content is empty, poll a bit longer for text to materialize.
+                let alertText = '';
+                let alertWrapper: HTMLElement | null;
+                let okAlert: HTMLButtonElement | null;
+
+                for (let attempt = 0; attempt < 50; attempt++) {
+                    alertWrapper = document.getElementById('alertWrapper');
+                    if (alertWrapper && alertWrapper.style.display === 'block') {
+                        // poll a bit for text just in case
+                        for (let inner = 0; inner < 40; inner++) {
+                            await HSUtils.sleep(5);
+                            const scroll = alertWrapper.querySelector('.scrollbar');
+                            const candidate = (scroll && scroll.textContent) ? scroll.textContent.trim() : (alertWrapper.textContent || '').trim();
+                            if (candidate.length > 0) {
+                                alertText = candidate;
+                                break;
+                            }
+                        }
+
+                        okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
+                        if (okAlert) {
+                            okAlert.click();
+                        }
+
+                        // Wait for it to close
+                        let alertStillPresent = true;
+                        for (let clearWait = 0; clearWait < 20; clearWait++) {
+                            await HSUtils.sleep(5);
+                            alertWrapper = document.getElementById('alertWrapper');
+                            if (!alertWrapper || alertWrapper.style.display !== 'block') {
+                                alertStillPresent = false;
+                                break;
+                            }
+                            // Re-click if stuck
+                            okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
+                            if (okAlert) okAlert.click();
+                        }
+                        break;
+                    }
+                    await HSUtils.sleep(5);
+                }
+
+                const isSuccess = (alertText || '').toLowerCase().includes('tree successfully imported');
+
+                if (!isSuccess) {
+                    const reason = alertText || 'Unknown error';
+                    failures.push({ index: i + 1, reason });
+                    // record failure for later reporting
+
+                    // Clear the file input to avoid residual state
+                    try {
+                        fileInput.files = new DataTransfer().files;
+                    } catch (e) {
+                        // ignore
+                    }
+
+                    // do not click save on this slot
+                    continue;
+                }
+
+                // Import succeeded -> now click the loadout button to save into the slot
                 loadoutBtn.click();
-                await HSUtils.sleep(50);
+
+                // Wait for confirm dialog and click OK to accept overwriting the slot; keep clicking until dismissed
+                let confirmWrapper: HTMLElement | null;
+                let okConfirm: HTMLButtonElement | null;
+
+                for (let attempt = 0; attempt < 50; attempt++) {
+                    confirmWrapper = document.getElementById('confirmWrapper');
+                    if (confirmWrapper && confirmWrapper.style.display === 'block') {
+                        okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
+                        if (okConfirm) {
+                            okConfirm.click();
+                        }
+
+                        // Wait for it to close
+                        let confirmStillPresent = true;
+                        for (let clearWait = 0; clearWait < 20; clearWait++) {
+                            await HSUtils.sleep(5);
+                            confirmWrapper = document.getElementById('confirmWrapper');
+                            if (!confirmWrapper || confirmWrapper.style.display !== 'block') {
+                                confirmStillPresent = false;
+                                break;
+                            }
+                            // Re-click if stuck
+                            okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
+                            if (okConfirm) okConfirm.click();
+                        }
+                        break;
+                    }
+                    await HSUtils.sleep(5);
+                }
+
+                // Success path
                 importedCount++;
             }
+            // summary: imported/skipped/failed
             modeToggle.click();
 
-            HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
-                notificationType: 'success'
-            });
+            if (failures.length > 0) {
+                const failureSummary = failures.map(f => `#${f.index}: ${f.reason}`).join('; ');
+                // Short user-facing notification; detailed info logged for debugging
+                HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, {
+                    notificationType: 'warning'
+                });
+                HSLogger.debug(`[Quick Import] detailed failures: ${failureSummary}`, this.context);
+            } else {
+                HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
+                    notificationType: 'success'
+                });
+            }
 
         } catch (err: unknown) {
             const msg =
@@ -1457,6 +1584,8 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
                         : 'Unknown error';
 
             HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
+            // Log detailed error context for debugging
+            HSLogger.debug(`[Quick Import] exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
             HSUI.Notify('Quick Import failed', {
                 notificationType: 'error'
@@ -1467,6 +1596,7 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
             if (previouslyActiveSlot) {
                 previouslyActiveSlot.click();
             }
+            // cleanup complete
         }
     }
 }

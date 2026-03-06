@@ -198,6 +198,35 @@ export class HSQuickbarManager {
     }
 
     /**
+     * Convenience wrapper to enable the automation quickbar.
+     * Accepts a factory that returns the section element and an optional setup callback
+     * to perform module-specific wiring once the section is injected.
+     */
+    public enableAutomationQuickbar(factory: QuickbarSectionFactory, setupCallback?: (section: HTMLElement) => void): void {
+        const id = 'automation';
+        this.registerSection(id, factory);
+        this.injectSection(id);
+        this.whenSectionInjected(id).then(() => {
+            const section = this.getSection(id);
+            if (section && setupCallback) {
+                try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
+            }
+        });
+    }
+
+    /**
+     * Convenience wrapper to disable the automation quickbar.
+     * Accepts an optional teardown callback to allow module-specific cleanup.
+     */
+    public disableAutomationQuickbar(teardownCallback?: () => void): void {
+        const id = 'automation';
+        if (teardownCallback) {
+            try { teardownCallback(); } catch (e) { /* ignore */ }
+        }
+        this.removeSection(id);
+    }
+
+    /**
      * Remove a section by ID
      */
     public removeSection(id: string): void {

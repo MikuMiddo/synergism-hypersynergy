@@ -1,21 +1,11 @@
 import { HSLogger } from "../../hs-core/hs-logger";
 
+export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
+
 /**
  * Updates the sparkline chart display for the given DOM and data.
- *
- * Usage/Interface:
- *   - The modal or parent passes the full metrics array and maxPoints.
- *   - This function slices the data internally for both chart display and label statistics.
- *   - For chart display: only the last `maxPoints` are shown (chartData = data.slice(-maxPoints)).
- *   - For label/windowed stats: windowSize = min(chartData.length, maxPoints).
- *
- * Handles all chart types (time/duration, quarks, golden quarks) and ensures both raw and average lines are always in range.
- *
- * @param dom SparklineDom instance (holds all chart DOM references and state)
- * @param data Full metrics array (not sliced)
- * @param computedGraphWidth SVG width (optional, defaults to 230)
- * @param formatNumberWithSign Number formatting function for labels
- * @param maxPoints Maximum points to display in chart (window for display and label stats)
+ * single-pass min/max/sum, no intermediate array allocations,
+ * dataKey-based field access instead of container.id checks.
  */
 export function updateSparkline(
     dom: SparklineDom | null,
@@ -24,45 +14,14 @@ export function updateSparkline(
     formatNumberWithSign: (n: number) => string,
     maxPoints: number
 ): void {
-    if (!dom) {
-        console.warn('[sparkline] updateSparkline: dom is null');
-        return;
-    }
-    // --- Map data to correct value/runningAvg property for each chart type ---
-    // This helper ensures the chart always uses the right fields for each metric type.
-    function mapChartData(dom: SparklineDom | null, data: any[]): any[] {
-        if (!Array.isArray(data)) return [];
-        if (dom && dom.isTime) {
-            // Time chart: use duration and runningAvgDuration
-            return data.map(m => ({
-                ...m,
-                value: m.duration,
-                runningAvg: m.runningAvgDuration
-            }));
-        } else if (dom && dom.container && dom.container.id === 'hs-sparkline-quarks-container') {
-            // Quarks chart: use quarksGained and runningAvgQuarksPerSecond
-            return data.map(m => ({
-                ...m,
-                value: m.quarksGained,
-                runningAvg: m.runningAvgQuarksPerSecond
-            }));
-        } else if (dom && dom.container && dom.container.id === 'hs-sparkline-goldenquarks-container') {
-            // Golden Quarks chart: use goldenQuarksGained and runningAvgGoldenQuarksPerSecond
-            return data.map(m => ({
-                ...m,
-                value: m.goldenQuarksGained,
-                runningAvg: m.runningAvgGoldenQuarksPerSecond
-            }));
-        }
-        // Fallback: return as-is
-        return data;
-    }
+    if (!dom) return;
 
-    // Only keep the last maxPoints for display and stats
-    let chartData: any[] = mapChartData(dom, Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data);
+    // Data is already pruned to maxPoints by the caller; handle any overflow defensively
+    const start = data.length > maxPoints ? data.length - maxPoints : 0;
+    const len = data.length - start;
 
     // If not enough data, clear chart and labels
-    if (!Array.isArray(chartData) || chartData.length < 2) {
+    if (len < 2) {
         dom.rawPolyline.setAttribute('points', '');
         if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
         dom.labelMax.textContent = '';
@@ -71,12 +30,50 @@ export function updateSparkline(
         return;
     }
 
-    // --- Chart scaling and axis setup ---
-    const gw = computedGraphWidth || 230; // SVG width
-    const times = chartData.map(d => d.timestamp);
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
-    const timeRange = maxTime - minTime || 1; // Avoid div by zero
+    const gw = computedGraphWidth || 230;
+    const key = dom.dataKey;
+    const isTime = key === 'time';
+
+    // Single pass: compute time range, Y range, and label avg aggregates — no intermediate arrays
+    let minTime = data[start].timestamp;
+    let maxTime = minTime;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let labelAvgNumerator = 0;
+    let labelAvgDenominator = 0;
+
+    for (let i = start; i < data.length; i++) {
+        const m = data[i];
+        const t = m.timestamp;
+        if (t < minTime) minTime = t;
+        if (t > maxTime) maxTime = t;
+
+        let rawY: number, avgY: number;
+        if (isTime) {
+            rawY = m.duration;
+            avgY = m.runningAvgDuration || 0;
+            labelAvgNumerator += rawY;
+            labelAvgDenominator++;
+        } else if (key === 'quarks') {
+            rawY = m.quarksGained / m.duration;
+            avgY = m.runningAvgQuarksPerSecond || 0;
+            labelAvgNumerator += m.quarksGained;
+            labelAvgDenominator += m.duration;
+        } else {
+            rawY = m.goldenQuarksGained / m.duration;
+            avgY = m.runningAvgGoldenQuarksPerSecond || 0;
+            labelAvgNumerator += m.goldenQuarksGained;
+            labelAvgDenominator += m.duration;
+        }
+
+        if (rawY < minY) minY = rawY;
+        if (rawY > maxY) maxY = rawY;
+        if (avgY < minY) minY = avgY;
+        if (avgY > maxY) maxY = avgY;
+    }
+
+    const timeRange = maxTime - minTime || 1;
+    const yRange = maxY - minY || 1;
 
     // Only update SVG width if changed
     const widthChanged = dom.lastWidth !== gw;
@@ -85,68 +82,36 @@ export function updateSparkline(
         dom.lastWidth = gw;
     }
 
-    // --- Unified logic for all chart types ---
-    // Parameterize y-value extraction and min/max calculation for both raw and avg lines
-    let getRawY: (d: any) => number;
-    let getAvgY: (d: any) => number;
-    let allYValues: number[] = [];
-    let labelSuffix = '';
-    let labelAvgNumerator = 0;
-    let labelAvgDenominator = 0;
+    // Build polyline points — pre-allocate parts array, single pass
+    const rawParts = new Array<string>(len);
+    const avgParts = new Array<string>(len);
+    for (let i = start; i < data.length; i++) {
+        const m = data[i];
+        const x = ((m.timestamp - minTime) / timeRange) * gw;
 
-    if (dom.isTime) {
-        // For time chart: y = duration, avg = runningAvgDuration
-        getRawY = d => d.value;
-        getAvgY = d => typeof d.runningAvg === 'number' ? d.runningAvg : 0;
-        // Both lines must be in range
-        allYValues = chartData.map(getRawY).concat(chartData.map(getAvgY));
-        labelSuffix = 's';
-        // Label avg: mean of windowed durations
-        const windowSize = Math.min(chartData.length, maxPoints);
-        const windowStart = chartData.length - windowSize;
-        const windowValues = chartData.map(getRawY).slice(windowStart);
-        labelAvgNumerator = windowValues.reduce((a, b) => a + b, 0);
-        labelAvgDenominator = windowValues.length;
-    } else {
-        // For quarks/golden: y = value/duration, avg = runningAvg
-        getRawY = d => d.value / d.duration;
-        getAvgY = d => typeof d.runningAvg === 'number' ? d.runningAvg : 0;
-        // Both lines must be in range
-        allYValues = chartData.flatMap(d => [getRawY(d), getAvgY(d)]);
-        labelSuffix = ' /s';
-        // Label avg: sum(value)/sum(duration) over window
-        const labelAvgCount = Math.min(chartData.length, maxPoints);
-        for (let i = chartData.length - labelAvgCount; i < chartData.length; i++) {
-            if (i >= 0) {
-                labelAvgNumerator += chartData[i].value;
-                labelAvgDenominator += chartData[i].duration;
-            }
+        let rawY: number, avgY: number;
+        if (isTime) {
+            rawY = m.duration;
+            avgY = m.runningAvgDuration || 0;
+        } else if (key === 'quarks') {
+            rawY = m.quarksGained / m.duration;
+            avgY = m.runningAvgQuarksPerSecond || 0;
+        } else {
+            rawY = m.goldenQuarksGained / m.duration;
+            avgY = m.runningAvgGoldenQuarksPerSecond || 0;
         }
+
+        const rawSvgY = 30 - ((rawY - minY) / yRange) * 30;
+        const avgSvgY = 30 - ((avgY - minY) / yRange) * 30;
+        const idx = i - start;
+        rawParts[idx] = `${x},${rawSvgY}`;
+        avgParts[idx] = `${x},${avgSvgY}`;
     }
+    const rawPointsStr = rawParts.join(' ');
+    const avgPointsStr = avgParts.join(' ');
 
-    // Compute min/max for both lines (ensures both are always visible)
-    const minY = Math.min(...allYValues);
-    const maxY = Math.max(...allYValues);
-    const yRange = maxY - minY || 1;
-
-    // --- Polyline point calculation helper ---
-    // Converts data array to SVG polyline points string
-    function buildPoints(arr: any[], yFn: (d: any) => number): string {
-        return arr.map(d => {
-            // X: normalized timestamp, Y: normalized value (inverted for SVG)
-            const x = ((d.timestamp - minTime) / timeRange) * gw;
-            const y = 30 - ((yFn(d) - minY) / yRange) * 30;
-            return `${x},${y}`;
-        }).join(' ');
-    }
-
-    // Build points for both raw and avg lines
-    const rawPointsStr = buildPoints(chartData, getRawY);
-    const avgPointsStr = buildPoints(chartData, getAvgY);
-
-    // --- Polyline DOM updates ---
-    // For time chart: raw = dashed, avg = solid; for others: avg = solid, raw = dashed
-    if (dom.isTime) {
+    // Polyline DOM updates (with change guards)
+    if (isTime) {
         if (dom.lastPoints !== rawPointsStr) {
             dom.rawPolyline.setAttribute('points', rawPointsStr);
             dom.lastPoints = rawPointsStr;
@@ -160,19 +125,17 @@ export function updateSparkline(
             dom.avgPolyline.setAttribute('points', avgPointsStr);
             dom.lastPoints = avgPointsStr;
         }
-        if (dom.rawPolyline && dom.lastPointsSecond !== rawPointsStr) {
+        if (dom.lastPointsSecond !== rawPointsStr) {
             dom.rawPolyline.setAttribute('points', rawPointsStr);
             dom.lastPointsSecond = rawPointsStr;
         }
     }
 
-    // --- Min/max marker lines ---
-    // Draw horizontal lines at min and max Y values (right edge of chart)
-    const markerX = Math.max(0, gw - 4); // X position for marker lines (near right edge)
+    // Min/max marker lines
+    const markerX = Math.max(0, gw - 4);
     const maxYPos = 30 - ((maxY - minY) / yRange) * 30;
-    const minYPos = 30 - ((minY - minY) / yRange) * 30;
+    const minYPos = 30;
 
-    // Only update marker lines if needed
     if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxYPos) {
         const gwStr = `${gw}`;
         const markerXStr = `${markerX}`;
@@ -197,10 +160,10 @@ export function updateSparkline(
         dom.lastMinY = minYPos;
     }
 
-    // --- Labels ---
-    // Compute and update min, avg, max labels for the chart
-    let labelMax, labelAvg, labelMin;
-    if (dom.isTime) {
+    // Labels
+    const labelSuffix = isTime ? 's' : ' /s';
+    let labelMax: string, labelAvg: string, labelMin: string;
+    if (isTime) {
         labelMax = `${maxY.toFixed(2)}${labelSuffix}`;
         labelAvg = labelAvgDenominator > 0 ? `${(labelAvgNumerator / labelAvgDenominator).toFixed(2)}${labelSuffix} avg` : `0.00${labelSuffix} avg`;
         labelMin = `${minY.toFixed(2)}${labelSuffix}`;
@@ -209,7 +172,6 @@ export function updateSparkline(
         labelAvg = labelAvgDenominator > 0 ? `${formatNumberWithSign(labelAvgNumerator / labelAvgDenominator)}${labelSuffix}` : `0.00${labelSuffix}`;
         labelMin = `${formatNumberWithSign(minY)}${labelSuffix}`;
     }
-    // Only update DOM if label changed
     if (dom.lastLabelMax !== labelMax) {
         dom.labelMax.textContent = labelMax;
         dom.lastLabelMax = labelMax;
@@ -245,6 +207,7 @@ export interface SparklineDom {
     labelAvg: HTMLSpanElement;
     labelMin: HTMLSpanElement;
     isTime: boolean;
+    dataKey: SparklineDataKey;
     color: string;
     lastWidth: number;
     lastPoints: string;
@@ -270,9 +233,10 @@ export interface SparklineDom {
  * @param container The parent HTML element to contain the sparkline chart.
  * @param color The color to use for the chart lines and labels.
  * @param isTime Whether this chart is for time/duration (true) or for rates (false).
+ * @param dataKey The data key identifying which metric fields to use ('time', 'quarks', or 'goldenQuarks').
  * @returns SparklineDom object with references to SVG, polylines, marker lines, and labels, or null if container is missing.
  */
-export function buildSparklineDom(container: HTMLElement | null, color: string, isTime: boolean): SparklineDom | null {
+export function buildSparklineDom(container: HTMLElement | null, color: string, isTime: boolean, dataKey: SparklineDataKey = 'time'): SparklineDom | null {
     if (!container) return null;
     container.textContent = '';
     const ns = 'http://www.w3.org/2000/svg';
@@ -344,6 +308,7 @@ export function buildSparklineDom(container: HTMLElement | null, color: string, 
         labelAvg,
         labelMin,
         isTime,
+        dataKey,
         color,
         lastWidth: 0,
         lastPoints: '',
