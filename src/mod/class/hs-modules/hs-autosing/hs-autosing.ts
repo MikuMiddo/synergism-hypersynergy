@@ -1354,15 +1354,35 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async enterAndLeaveExalt(): Promise<void> {
+        const clickDelayMs = Math.max(this.sleepTime, 25);
+        const enterTimeoutMs = 5000;
+        const leaveTimeoutMs = 6000;
+
+        const enterStart = performance.now();
+        let enterAttempts = 0;
         while (!this.isInExalt()) {
+            if (!this.autosingEnabled) return;
+            if (performance.now() - enterStart > enterTimeoutMs) {
+                throw new Error(`enterAndLeaveExalt timeout while entering EXALT (attempts=${enterAttempts})`);
+            }
             await HSUtils.click(this.exalt2Btn);
-            await HSUtils.sleep(this.sleepTime);
+            enterAttempts++;
+            await HSUtils.sleep(clickDelayMs);
         }
 
+        const leaveStart = performance.now();
+        let leaveAttempts = 0;
         while (this.isInExalt()) {
+            if (!this.autosingEnabled) return;
+            if (performance.now() - leaveStart > leaveTimeoutMs) {
+                throw new Error(`enterAndLeaveExalt timeout while leaving EXALT (attempts=${leaveAttempts})`);
+            }
             await HSUtils.click(this.exalt2Btn);
-            await HSUtils.sleep(this.sleepTime);
+            leaveAttempts++;
+            await HSUtils.sleep(clickDelayMs);
         }
+
+        HSLogger.debug(`enterAndLeaveExalt success (enterAttempts=${enterAttempts}, leaveAttempts=${leaveAttempts})`, this.context);
     }
 
     private isInExalt(): boolean {
