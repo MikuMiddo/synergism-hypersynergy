@@ -153,11 +153,11 @@
 
     // Phase 1: intercept + de-duplicate custom element registration during script race windows.
     // Keep customElements.define duplicate-safe during interception/injection.
-    // We do not hard-block definitions globally; we only skip duplicates.
+    // Current strategy is pass-through + duplicate guard (no global hard-block by default).
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Lock phase: skip definitions until we unlock right before injection.
+            // Optional strict mode hook: when explicitly disabled, skip new registrations.
             // Log once per unique name to avoid spam.
             if (!customElements.get(name)) {
                 loaderDiagnostics.customElements.blockedCount += 1;
@@ -415,43 +415,99 @@
             // ── CUSTOM ELEMENT CONSTRUCTOR PATCH ─────────────────────
             // On some race paths, direct customized built-in constructors throw
             // Illegal constructor. We shim those constructors and preserve shape.
-            const tabRowDefineToken = 'customElements.define("tab-row",c0,{extends:"div"});';
-            if (code.includes(tabRowDefineToken)) {
-                const safeTabRowCtorHelper = 'const __HS_ORIG_C0=c0;const __HS_SAFE_NEW_C0=()=>{const existing=document.getElementById("tabrow");if(existing)return existing;try{return new __HS_ORIG_C0()}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.tabRowFallbackCount=(__hsDiag.tabRowFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.tabRowFallbackReasonsSample)&&reason&&__hsDiag.tabRowFallbackReasonsSample.length<10&&!__hsDiag.tabRowFallbackReasonsSample.includes(reason)){__hsDiag.tabRowFallbackReasonsSample.push(reason);}}const row=document.createElement("div");row.id="tabrow";row.__HS_subTabs=[];row.appendButton=(...tabs)=>{for(const tab of tabs){if(!tab)continue;let candidate=tab;if(tab.id){const existingTab=document.getElementById(tab.id);if(existingTab&&existingTab!==tab)candidate=existingTab;}if(!row.__HS_subTabs.includes(candidate))row.__HS_subTabs.push(candidate);if(candidate.parentElement===row)continue;try{row.appendChild(candidate);}catch(_a){}}return row;};row.getSubTabs=()=>row.__HS_subTabs;row.getCurrentTab=()=>{for(const tab of row.__HS_subTabs){try{if(typeof tab?.getSelectedState==="function"&&tab.getSelectedState())return tab;if(tab?.__HS_selected===true)return tab;}catch(_b){}}return row.__HS_subTabs[0]||{isUnlocked:()=>true,getUnlockedState:()=>true,getType:()=>0};};row.setCurrentTab=(idx)=>{const i=Number(idx)||0;row.__HS_subTabs.forEach((tab,n)=>{if(!tab)return;try{if(typeof tab.setSelectedState==="function")tab.setSelectedState(n===i);else tab.__HS_selected=(n===i);}catch(_c){}});return row;};return row;}};';
-                code = code.replace(tabRowDefineToken, `${tabRowDefineToken}${safeTabRowCtorHelper}`);
+            let tabRowCtorPatched = false;
+            const tabRowDefinePattern = /customElements\.define\("tab-row",([A-Za-z_$][\w$]*),\{extends:"div"\}\);/;
+            const tabRowDefineMatch = tabRowDefinePattern.exec(code);
+            let tabRowCtorSymbol = null;
+            let tabRowCtorReplacements = 0;
+            if (tabRowDefineMatch) {
+                tabRowCtorSymbol = tabRowDefineMatch[1];
+                const tabRowDefineToken = tabRowDefineMatch[0];
+                const safeTabRowCtorHelper = `const __HS_ORIG_TABROW=${tabRowCtorSymbol};const __HS_SAFE_NEW_TABROW=()=>{const existing=document.getElementById("tabrow");if(existing)return existing;try{return new __HS_ORIG_TABROW()}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.tabRowFallbackCount=(__hsDiag.tabRowFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.tabRowFallbackReasonsSample)&&reason&&__hsDiag.tabRowFallbackReasonsSample.length<10&&!__hsDiag.tabRowFallbackReasonsSample.includes(reason)){__hsDiag.tabRowFallbackReasonsSample.push(reason);}}const row=document.createElement("div");row.id="tabrow";row.__HS_subTabs=[];row.appendButton=(...tabs)=>{for(const tab of tabs){if(!tab)continue;let candidate=tab;if(tab.id){const existingTab=document.getElementById(tab.id);if(existingTab&&existingTab!==tab)candidate=existingTab;}if(!row.__HS_subTabs.includes(candidate))row.__HS_subTabs.push(candidate);if(candidate.parentElement===row)continue;try{row.appendChild(candidate);}catch(_a){}}return row;};row.getSubTabs=()=>row.__HS_subTabs;row.getCurrentTab=()=>{for(const tab of row.__HS_subTabs){try{if(typeof tab?.getSelectedState==="function"&&tab.getSelectedState())return tab;if(tab?.__HS_selected===true)return tab;}catch(_b){}}return row.__HS_subTabs[0]||{isUnlocked:()=>true,getUnlockedState:()=>true,getType:()=>0};};row.setCurrentTab=(idx)=>{const i=Number(idx)||0;row.__HS_subTabs.forEach((tab,n)=>{if(!tab)return;try{if(typeof tab.setSelectedState==="function")tab.setSelectedState(n===i);else tab.__HS_selected=(n===i);}catch(_c){}});return row;};return row;}};`;
+                const tabRowInsertAt = tabRowDefineMatch.index + tabRowDefineToken.length;
+                code = code.slice(0, tabRowInsertAt) + safeTabRowCtorHelper + code.slice(tabRowInsertAt);
 
-                const newTabRowCtorPattern = /vn\s*=\s*new\s+c0\b/;
-                if (newTabRowCtorPattern.test(code)) {
-                    code = code.replace(newTabRowCtorPattern, 'vn=__HS_SAFE_NEW_C0()');
-                    log('Patched tab-row construction (new c0 -> __HS_SAFE_NEW_C0)');
+                // Handle both minified constructor forms: `x=new Sym;` and `x=new Sym(...)`.
+                const newTabRowCtorPattern = new RegExp(`(=\\s*)new\\s+${tabRowCtorSymbol}\\b(\\s*\\()?`, 'g');
+                code = code.replace(newTabRowCtorPattern, (_match, prefix, openParen) => {
+                    tabRowCtorReplacements += 1;
+                    return openParen ? `${prefix}__HS_SAFE_NEW_TABROW(` : `${prefix}__HS_SAFE_NEW_TABROW()`;
+                });
+
+                if (tabRowCtorReplacements > 0) {
+                    tabRowCtorPatched = true;
+                    log(`Patched tab-row construction (new ${tabRowCtorSymbol} -> __HS_SAFE_NEW_TABROW, ${tabRowCtorReplacements} site${tabRowCtorReplacements === 1 ? '' : 's'})`);
                 } else {
-                    warn('Could not patch tab-row construction — new c0 pattern not found');
+                    warn(`Could not patch tab-row construction — new ${tabRowCtorSymbol}(...) assignment pattern not found`);
                 }
             } else {
-                warn('Could not patch tab-row constructor shim — tab-row define token not found');
+                warn('Could not patch tab-row constructor shim — tab-row define pattern not found');
             }
 
             // ── SUB-TAB CONSTRUCTOR PATCH ─────────────────────────────
             // If sub-tab is already registered from another execution path, direct
             // `new lr(config)` can throw Illegal constructor. Use a safe shim.
-            const subTabDefineToken = 'customElements.define("sub-tab",lr,{extends:"button"});';
-            if (code.includes(subTabDefineToken)) {
-                const safeLrCtorHelper = 'const __HS_ORIG_LR=lr;const __HS_SAFE_NEW_LR=(cfg)=>{const safeCfg=(cfg&&typeof cfg==="object")?cfg:{};if(safeCfg.id){const existing=document.getElementById(safeCfg.id);if(existing)return existing;}try{return new __HS_ORIG_LR(safeCfg)}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.subTabFallbackCount=(__hsDiag.subTabFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.subTabFallbackReasonsSample)&&reason&&__hsDiag.subTabFallbackReasonsSample.length<10&&!__hsDiag.subTabFallbackReasonsSample.includes(reason)){__hsDiag.subTabFallbackReasonsSample.push(reason);}}const el=document.createElement("button");el.__HS_tabType=0;el.__HS_unlocked=true;el.__HS_visible=true;el.__HS_enabled=true;el.__HS_selected=false;if(safeCfg.id)el.id=safeCfg.id;if(safeCfg.class)el.className=safeCfg.class;if(safeCfg.i18n){el.dataset.i18n=safeCfg.i18n;el.setAttribute("data-i18n",safeCfg.i18n);}if(typeof el.setType!=="function")el.setType=(v)=>{el.__HS_tabType=Number(v);return el;};if(typeof el.getType!=="function")el.getType=()=>Number.isFinite(el.__HS_tabType)?el.__HS_tabType:0;if(typeof el.setUnlockedState!=="function")el.setUnlockedState=(v)=>{el.__HS_unlocked=!!v;return el;};if(typeof el.getUnlockedState!=="function")el.getUnlockedState=()=>!!el.__HS_unlocked;if(typeof el.isUnlocked!=="function")el.isUnlocked=()=>!!el.__HS_unlocked;if(typeof el.setVisibleState!=="function")el.setVisibleState=(v)=>{el.__HS_visible=!!v;return el;};if(typeof el.getVisibleState!=="function")el.getVisibleState=()=>!!el.__HS_visible;if(typeof el.isVisible!=="function")el.isVisible=()=>!!el.__HS_visible;if(typeof el.setEnabledState!=="function")el.setEnabledState=(v)=>{el.__HS_enabled=!!v;return el;};if(typeof el.getEnabledState!=="function")el.getEnabledState=()=>!!el.__HS_enabled;if(typeof el.isEnabled!=="function")el.isEnabled=()=>!!el.__HS_enabled;if(typeof el.setSelectedState!=="function")el.setSelectedState=(v)=>{el.__HS_selected=!!v;return el;};if(typeof el.getSelectedState!=="function")el.getSelectedState=()=>!!el.__HS_selected;if(typeof el.isSelected!=="function")el.isSelected=()=>!!el.__HS_selected;const __HS_NOOP_CHAIN=["setHoverState","setNotificationState","setTabColor","setTabClass","setTooltip","setLabel","setText","setDescription","makeDraggable","makeRemoveable","makeNotToggleable","makeToggleable"];for(const k of __HS_NOOP_CHAIN){if(typeof el[k]!=="function")el[k]=()=>el;}return el;}};';
-                code = code.replace(subTabDefineToken, `${subTabDefineToken}${safeLrCtorHelper}`);
+            let subTabCtorPatched = false;
+            const subTabDefinePattern = /customElements\.define\("sub-tab",([A-Za-z_$][\w$]*),\{extends:"button"\}\);/;
+            const subTabDefineMatch = subTabDefinePattern.exec(code);
+            let subTabCtorSymbol = null;
+            let subTabCtorReplacements = 0;
+            if (subTabDefineMatch) {
+                subTabCtorSymbol = subTabDefineMatch[1];
+                const subTabDefineToken = subTabDefineMatch[0];
+                const safeSubTabCtorHelper = `const __HS_ORIG_SUBTAB=${subTabCtorSymbol};const __HS_SAFE_NEW_SUBTAB=(cfg)=>{const safeCfg=(cfg&&typeof cfg==="object")?cfg:{};if(safeCfg.id){const existing=document.getElementById(safeCfg.id);if(existing)return existing;}try{return new __HS_ORIG_SUBTAB(safeCfg)}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.subTabFallbackCount=(__hsDiag.subTabFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.subTabFallbackReasonsSample)&&reason&&__hsDiag.subTabFallbackReasonsSample.length<10&&!__hsDiag.subTabFallbackReasonsSample.includes(reason)){__hsDiag.subTabFallbackReasonsSample.push(reason);}}const el=document.createElement("button");el.__HS_tabType=0;el.__HS_unlocked=true;el.__HS_visible=true;el.__HS_enabled=true;el.__HS_selected=false;if(safeCfg.id)el.id=safeCfg.id;if(safeCfg.class)el.className=safeCfg.class;if(safeCfg.i18n){el.dataset.i18n=safeCfg.i18n;el.setAttribute("data-i18n",safeCfg.i18n);}if(typeof el.setType!=="function")el.setType=(v)=>{el.__HS_tabType=Number(v);return el;};if(typeof el.getType!=="function")el.getType=()=>Number.isFinite(el.__HS_tabType)?el.__HS_tabType:0;if(typeof el.setUnlockedState!=="function")el.setUnlockedState=(v)=>{el.__HS_unlocked=!!v;return el;};if(typeof el.getUnlockedState!=="function")el.getUnlockedState=()=>!!el.__HS_unlocked;if(typeof el.isUnlocked!=="function")el.isUnlocked=()=>!!el.__HS_unlocked;if(typeof el.setVisibleState!=="function")el.setVisibleState=(v)=>{el.__HS_visible=!!v;return el;};if(typeof el.getVisibleState!=="function")el.getVisibleState=()=>!!el.__HS_visible;if(typeof el.isVisible!=="function")el.isVisible=()=>!!el.__HS_visible;if(typeof el.setEnabledState!=="function")el.setEnabledState=(v)=>{el.__HS_enabled=!!v;return el;};if(typeof el.getEnabledState!=="function")el.getEnabledState=()=>!!el.__HS_enabled;if(typeof el.isEnabled!=="function")el.isEnabled=()=>!!el.__HS_enabled;if(typeof el.setSelectedState!=="function")el.setSelectedState=(v)=>{el.__HS_selected=!!v;return el;};if(typeof el.getSelectedState!=="function")el.getSelectedState=()=>!!el.__HS_selected;if(typeof el.isSelected!=="function")el.isSelected=()=>!!el.__HS_selected;const __HS_NOOP_CHAIN=["setHoverState","setNotificationState","setTabColor","setTabClass","setTooltip","setLabel","setText","setDescription","makeDraggable","makeRemoveable","makeNotToggleable","makeToggleable"];for(const k of __HS_NOOP_CHAIN){if(typeof el[k]!=="function")el[k]=()=>el;}return el;}};`;
+                const subTabInsertAt = subTabDefineMatch.index + subTabDefineToken.length;
+                code = code.slice(0, subTabInsertAt) + safeSubTabCtorHelper + code.slice(subTabInsertAt);
 
-                const newLrPattern = /new\s+lr\s*\(/g;
-                if (newLrPattern.test(code)) {
-                    code = code.replace(newLrPattern, '__HS_SAFE_NEW_LR(');
-                    log('Patched sub-tab construction (new lr -> __HS_SAFE_NEW_LR)');
+                const newSubTabPattern = new RegExp(`new\\s+${subTabCtorSymbol}\\s*\\(`, 'g');
+                code = code.replace(newSubTabPattern, () => {
+                    subTabCtorReplacements += 1;
+                    return '__HS_SAFE_NEW_SUBTAB(';
+                });
+
+                if (subTabCtorReplacements > 0) {
+                    subTabCtorPatched = true;
+                    log(`Patched sub-tab construction (new ${subTabCtorSymbol} -> __HS_SAFE_NEW_SUBTAB, ${subTabCtorReplacements} site${subTabCtorReplacements === 1 ? '' : 's'})`);
                 } else {
-                    warn('Could not patch sub-tab construction — new lr pattern not found');
+                    warn(`Could not patch sub-tab construction — new ${subTabCtorSymbol}(...) pattern not found`);
                 }
             } else {
-                warn('Could not patch sub-tab constructor shim — sub-tab define token not found');
+                warn('Could not patch sub-tab constructor shim — sub-tab define pattern not found');
+            }
+
+            const constructorPatchHealth = {
+                tabRowCtorPatched,
+                subTabCtorPatched,
+                tabRowSymbol: tabRowCtorSymbol,
+                tabRowRewriteCount: tabRowCtorReplacements,
+                subTabSymbol: subTabCtorSymbol,
+                subTabRewriteCount: subTabCtorReplacements
+            };
+            if (window.__HS_LOADER_DIAGNOSTICS) {
+                // Expose structured patch outcomes for console triage and update checks.
+                window.__HS_LOADER_DIAGNOSTICS.constructorPatchHealth = constructorPatchHealth;
+            }
+            log('Constructor patch diagnostics', {
+                tabRowSymbol: tabRowCtorSymbol,
+                tabRowRewriteCount: tabRowCtorReplacements,
+                tabRowPatched: tabRowCtorPatched,
+                subTabSymbol: subTabCtorSymbol,
+                subTabRewriteCount: subTabCtorReplacements,
+                subTabPatched: subTabCtorPatched
+            });
+
+            if (!tabRowCtorPatched || !subTabCtorPatched) {
+                // Abort before script injection to avoid partial boot loops with broken constructors.
+                const missing = [];
+                if (!tabRowCtorPatched) missing.push('tab-row constructor rewrite');
+                if (!subTabCtorPatched) missing.push('sub-tab constructor rewrite');
+                const message = `Critical constructor patch missing: ${missing.join(', ')}; aborting bundle injection`;
+                warn(message);
+                throw new Error(`[HS Loader] ${message}`);
             }
 
             log(`Patch summary: export=${!!exportResult} define=${defineWindowIdx !== -1}`);
-            log('v3.5 [2026-03-05]f patch complete — injecting bundle');
+            log('Patch complete — injecting bundle');
 
             if (HS_DUMP_PATCHED_BUNDLE) {
                 window.__HS_PATCHED_BUNDLE_META = {
@@ -508,7 +564,7 @@
                 });
             }
 
-            // UNLOCK DEFINITIONS JUST BEFORE INJECTION
+            // Ensure custom element registration pass-through is enabled for bundle injection.
             allowCustomElements = true;
             log('Custom Elements unlocked for patched bundle', {
                 blocked: loaderDiagnostics.customElements.blockedCount,
@@ -1238,6 +1294,6 @@
         (document.head || document.documentElement).appendChild(s);
     }
 
-    log('LOADER Initialized - CDN mode');
+    log('LOADER v3.5 Initialized - CDN mode');
 
 })();
