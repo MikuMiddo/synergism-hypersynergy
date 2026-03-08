@@ -164,14 +164,15 @@ export async function openStrategyPhaseModal(
                 uiMod.CloseModal(modalId);
             }
 
-                if (el.id === "hs-autosing-phase-corruptions") {
-                    const selectionRef = { value: selectedLoadoutName };
-                    void openAutosingCorruptionModal(
-                        uiMod,
-                        corruptionLoadouts,
-                        selectionRef,
-                        modalId,
-                        (newValue) => {
+            if (el.id === "hs-autosing-phase-corruptions") {
+                const selectionRef = { value: selectedLoadoutName };
+                void openAutosingCorruptionModal(
+                    uiMod,
+                    corruptionLoadouts,
+                    selectionRef,
+                    {
+                        parentModalId: modalId,
+                        onDone: (newValue) => {
                             selectedLoadoutName = newValue;
 
                             // Ensure the draft phase reflects the selection immediately so reopening the selector
@@ -186,7 +187,8 @@ export async function openStrategyPhaseModal(
                                 selectionEl.textContent = label;
                             }
                         }
-                    );
+                    }
+                );
             }
 
             if (el.id === "hs-autosing-phase-challenges") {

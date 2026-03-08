@@ -6208,11 +6208,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const RED_AMB_GEN_1 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed;
         const RED_AMB_GEN_2 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed;
+        const AMBROSIA_UNLOCKED_GATE = gameData.singularityChallenges.noSingularityUpgrades.completions > 0 ? 1 : 0;
 
         const cube76 = gameData.cubeUpgrades[76] ?? 1;
 
         const vals = [
-            +(gameData.visitedAmbrosiaSubtab),
+            AMBROSIA_UNLOCKED_GATE,
             P_GEN_BUFF,
             campaignBlueberrySpeedBonus,
             (this.R_calculateAmbrosiaGenerationShopUpgrade() as number),
