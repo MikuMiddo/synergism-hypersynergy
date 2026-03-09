@@ -765,7 +765,58 @@
             };
         },
 
-        getPlayer
+        getPlayer,
+
+        /**
+         * Directly sets upgrades[81]=1 on the live player object.
+         * upgrades[81] is the Worker Autobuyer. When set, the game's own autobuyer
+         * tick (every 5ms) will call buyProducer('first','Coin',1) automatically,
+         * breaking the post-singularity deadlock (0 PP → can't buy via PP → 0 workers
+         * → 0 production → 0 prestige → 0 PP).
+         * Safe for sing25+: the free grant is negligible and the game re-validates on
+         * the next autoUpgrades() tick anyway.
+         * Returns { ok, method, upgrades81Before } for diagnostic logging.
+         */
+        ensureWorkerAutobuyer() {
+            console.debug('[HS] ensureWorkerAutobuyer: called');
+            const p = getPlayer();
+            if (!p) {
+                console.warn('[HS] ensureWorkerAutobuyer: no player object available');
+                return { ok: false, method: 'no-player', upgrades81Before: undefined };
+            }
+            const highestSing = p.highestSingularityCount ?? 0;
+            const upgrades81Now = p.upgrades?.[81];
+            const coins = p.coins;
+            const prestigePoints = p.prestigePoints;
+            const firstOwnedCoin = p.firstOwnedCoin;
+            console.debug('[HS] ensureWorkerAutobuyer: player state', {
+                highestSing,
+                upgrades81: upgrades81Now,
+                coins,
+                prestigePoints,
+                firstOwnedCoin,
+                hasUpgradesArray: !!p.upgrades
+            });
+            if (highestSing < 25) {
+                const result = { ok: false, method: 'sing-too-low', highestSing, upgrades81Before: upgrades81Now };
+                console.warn('[HS] ensureWorkerAutobuyer: rejected —', result);
+                return result;
+            }
+            if (upgrades81Now === 1) {
+                const result = { ok: true, method: 'already-enabled', upgrades81Before: upgrades81Now };
+                console.debug('[HS] ensureWorkerAutobuyer: no-op —', result);
+                return result;
+            }
+            if (!p.upgrades) {
+                const result = { ok: false, method: 'no-upgrades-array', upgrades81Before: undefined };
+                console.warn('[HS] ensureWorkerAutobuyer: rejected —', result);
+                return result;
+            }
+            p.upgrades[81] = 1;
+            const result = { ok: true, method: 'direct-write', upgrades81Before: upgrades81Now };
+            console.log('[HS] ensureWorkerAutobuyer: ✅ upgrades[81] set to 1 —', result);
+            return result;
+        }
     };
 
     window.__HS_BACKDOOR__ = {
