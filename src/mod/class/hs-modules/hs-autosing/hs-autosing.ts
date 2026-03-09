@@ -395,6 +395,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     public stopAutosing(options?: { showReviewModal?: boolean }): void {
+        if (!this.autosingEnabled) { return; }
         const showReviewModal = options?.showReviewModal ?? false;
 
         this.stopAutosingCore({
@@ -977,10 +978,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (!isActive()) {
-            HSLogger.debug(`Timeout: Failed to enter challenge ${challengeIndex}`, this.context);
+            HSLogger.warn(`Timeout: Failed to enter challenge ${challengeIndex}`, this.context);
             return;
         }
 
+        await HSUtils.sleep(50); // Crappy anti coin100 bug ? 
         this.coin.click();
 
         const startTime = performance.now();
@@ -1023,8 +1025,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(sleepMs);
         }
 
-        if (challengeIndex <= 10) {
-            HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
+        // No warning if minCompletions = 0 because it's ok strategy-wise
+        if (challengeIndex <= 10 && minCompletions !== 0) {
+            HSLogger.warn(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
         }
     }
 
