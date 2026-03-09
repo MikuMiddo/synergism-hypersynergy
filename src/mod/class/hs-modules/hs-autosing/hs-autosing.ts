@@ -1235,6 +1235,22 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
+    private antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
+        window.setTimeout(() => {
+            let attempt = 0;
+            const intervalId = window.setInterval(() => {
+                attempt++;
+                this.coin.click();
+                // HSLogger.debug(`antiBuyCoinBug: this.coin.click() burst ${attempt}/${repeatCount} via interval (${intervalMs}ms).`, this.context);
+
+                if (attempt >= repeatCount) {
+                    window.clearInterval(intervalId);
+                    HSLogger.debug("antiBuyCoinBug: Finished anti-buyCoinBug burst clicks.", this.context);
+                }
+            }, intervalMs);
+        }, initialDelayMs);
+    }
+
     // ============================================================================
     // AMBROSIA LOADOUT
     // ============================================================================
@@ -1368,10 +1384,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
 
-        // Temporary fix for the buy coin bug...
-        setTimeout(() => {
-            this.coin.click();
-        }, 50);
 
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),
@@ -1394,6 +1406,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(1);
             stage = await this.getStage();
         }
+
+        this.antiBuyCoinBug(20, 10, 8);
 
         this.observeAntiquitiesRune();
         this.prevActionTime = performance.now();

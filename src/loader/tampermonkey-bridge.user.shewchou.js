@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader (Shewchou)
 // @namespace    https://github.com/Ferlieloi
-// @version      1.0
+// @version      1.1
 // @description  Evergreen bridge to official Hypersynergism mod
 // @author       Ferlieloi
 // @match        https://synergism.cc/*
@@ -13,12 +13,12 @@
 
 // Production Evergreen Bridge.
 // Install once - auto-updates.
-// Loads the full "true" loader (hypersynergism.user.js) using a cache-busting fetch
+// Loads the full "true" loader (hypersynergism.user.shewchou.js) using a cache-busting fetch
 // so the latest version is used instead of a stale cached copy.
 
 (function () {
     'use strict';
-    const base = 'https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.js';
+    const base = 'https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.shewchou.js';
     const url = base + (base.includes('?') ? '&' : '?') + 't=' + Date.now();
 
     try {
