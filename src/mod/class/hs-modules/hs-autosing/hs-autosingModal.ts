@@ -13,7 +13,7 @@ import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosing } from "./hs-autosing";
-import { HSAutosingDB } from './hs-autosingDB';
+// import { HSAutosingDB } from './hs-autosingDB';
 import { HSAutosingExportManager } from './hs-autosingExportManager';
 import { createPhaseRowDom, updatePhaseRowDom, PhaseRowDom } from "./hs-autosingPhaseStats";
 import { SparklineDom, SparklineDataKey, buildSparklineDom, updateSparkline } from './hs-autosingSparkline';
@@ -94,7 +94,7 @@ export class HSAutosingModal {
     private farmingGrid: HTMLElement | null = null;
 
     // --- Data & State ---
-    private db: HSAutosingDB;
+    // private db: HSAutosingDB;
     private exportManager: HSAutosingExportManager | null = null;
     private showDetailedData: boolean = true;
     private advancedDataCollectionEnabled: boolean = false;
@@ -211,7 +211,8 @@ export class HSAutosingModal {
      * Construct the timer modal and initialize core state and DOM.
      */
     constructor() {
-        this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles', 10);
+        // db disabled for now...
+        // this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles', 10);
         this.createTimerDisplay();
         this.setupDragAndResize();
         this.cachedGlobalPhaseIndex = new Map();
@@ -604,6 +605,9 @@ export class HSAutosingModal {
         this.restartButton.classList.toggle('hs-hidden', this.isMinimized);
         this.chartToggleBtn.classList.toggle('hs-hidden', this.isMinimized);
 
+        // In review mode, move the "close" button to the left so it doesn't change place
+        this.stopButton.style.order = isReview ? '-1' : '';
+
         this.stopButton.textContent = isReview ? '✖️' : '🔴';
         this.stopButton.title = isReview ? 'Close stats modal' : 'Stop Autosing NOW';
     }
@@ -952,7 +956,7 @@ export class HSAutosingModal {
         // Check advanced-data-collection once at autosing start (cached).
         this.advancedDataCollectionEnabled = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
         if (this.advancedDataCollectionEnabled) {
-            this.db.clearBundles().catch(console.error);
+            // this.db.clearBundles().catch(console.error);
         }
 
         // Reset render versions so next render is a full refresh
@@ -1102,7 +1106,7 @@ export class HSAutosingModal {
             if (c15Score !== undefined) {
                 bundle.c15 = c15Score.toString();
             }
-            this.db.addBundle(bundle, compressToUTF16).catch(console.error);
+            // this.db.addBundle(bundle, compressToUTF16).catch(console.error);
         }
 
         // New singularity affects general stats + charts.

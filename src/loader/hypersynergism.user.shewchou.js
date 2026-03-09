@@ -148,12 +148,12 @@
 
     let windowLoadFired = false;
     let gameScriptDetected = false;
-    let allowCustomElements = true;
+    let allowCustomElements = false;
     let manualInitInFlight = null;
 
-    // Phase 1: intercept + de-duplicate custom element registration during script race windows.
-    // Keep customElements.define duplicate-safe during interception/injection.
-    // Current strategy is pass-through + duplicate guard (no global hard-block by default).
+    // Phase 1: hard-lock custom element registration during interception race windows.
+    // This blocks any early original-script define() calls until we inject the patched bundle.
+    // Duplicate guard remains active after unlock for safety.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
