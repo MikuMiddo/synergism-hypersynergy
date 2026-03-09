@@ -37,7 +37,7 @@ export class HSQuickbarManager {
      */
     public static ensureQuickbarsRow(): HTMLDivElement {
         const header = document.querySelector('header');
-        if (!header) throw new Error('Header element not found');
+        if (!header) throw new Error('[HSQuickbarManager] Header element not found');
         let quickbarsRow = header.querySelector('#quickbarsRow') as HTMLDivElement | null;
         if (!quickbarsRow) {
             quickbarsRow = document.createElement('div');
@@ -68,7 +68,7 @@ export class HSQuickbarManager {
      */
     public registerSection(id: string, factory: QuickbarSectionFactory): void {
         // Diagnostic log
-        HSLogger.debug(`[HSQuickbarManager]: registerSection(${id}) called`);
+        HSLogger.debug(`registerSection(${id}) called`, "HSQuickbarManager");
         this.sectionFactories.set(id, factory);
         if (!this.sectionOrder.includes(id)) {
             this.sectionOrder.push(id);
@@ -88,7 +88,7 @@ export class HSQuickbarManager {
      * If no parent is provided, uses ensureQuickbarsRow().
      */
     public injectSection(id: string, parent?: HTMLElement): void {
-        HSLogger.debug(`[HSQuickbarManager]: injectSection(${id}) called`);
+        HSLogger.debug(`injectSection(${id}) called`, "HSQuickbarManager");
         const row = parent || HSQuickbarManager.ensureQuickbarsRow();
         if (!row) return;
 
@@ -109,7 +109,7 @@ export class HSQuickbarManager {
         // Create the new element
         const factory = this.sectionFactories.get(id);
         if (!factory) return;
-        HSLogger.debug(`[HSQuickbarManager]: injecting section ${id}`);
+        HSLogger.debug(`injecting section ${id}`, "HSQuickbarManager");
         const el = factory();
 
         // Find the next quickbar element in order (if any)
@@ -169,10 +169,10 @@ export class HSQuickbarManager {
      * If already injected, calls immediately.
      */
     public onSectionInjected(id: string, callback: () => void): void {
-        HSLogger.debug(`[HSQuickbarManager]: onSectionInjected(${id}) called`);
+        HSLogger.debug(`onSectionInjected(${id}) called`, "HSQuickbarManager");
         if (this.sectionElements.has(id)) {
             // Already injected, call immediately
-            HSLogger.debug(`[HSQuickbarManager]: section ${id} already injected, calling callback immediately`);
+            HSLogger.debug(`section ${id} already injected, calling callback immediately`, "HSQuickbarManager");
             callback();
             return;
         }
@@ -193,7 +193,7 @@ export class HSQuickbarManager {
      * Get the DOM element for a registered section (after injection)
      */
     public getSection(id: string): HTMLElement | undefined {
-        HSLogger.debug(`[HSQuickbarManager]: getSection(${id}) called`);
+        HSLogger.debug(`getSection(${id}) called`, "HSQuickbarManager");
         return this.sectionElements.get(id);
     }
 
@@ -230,7 +230,7 @@ export class HSQuickbarManager {
      * Remove a section by ID
      */
     public removeSection(id: string): void {
-        HSLogger.debug(`[HSQuickbarManager]: removeSection(${id}) called`);
+        HSLogger.debug(`removeSection(${id}) called`, "HSQuickbarManager");
         this.sectionFactories.delete(id);
         this.sectionOrder = this.sectionOrder.filter(x => x !== id);
         const el = this.sectionElements.get(id);

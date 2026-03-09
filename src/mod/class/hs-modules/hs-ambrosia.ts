@@ -521,7 +521,7 @@ export class HSAmbrosia extends HSModule
             const activeSlot = Array.from(slots).find(slot => slot.id === quickbarId);
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
-                HSLogger.debug('Added active class to:' + activeSlot.id, this.context);
+                // HSLogger.debug('Added active class to:' + activeSlot.id, this.context);
             } else {
                 HSLogger.warn('No activeSlot found in quickBar for slotEnum:' + slotEnum + ' quickbarId:' + quickbarId, this.context);
             }
@@ -537,12 +537,12 @@ export class HSAmbrosia extends HSModule
             const activeSlot = Array.from(slots).find(slot => slot.id === originalId);
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
-                HSLogger.debug('Added active class to:' + activeSlot.id, this.context);
+                // HSLogger.debug('Added active class to:' + activeSlot.id, this.context);
             } else {
                 HSLogger.warn('No activeSlot found in originalQuickBar for slotEnum:' + slotEnum + ' originalId:' + originalId, this.context);
             }
         }
-        HSLogger.debug('updateCurrentLoadout complete for' + slotEnum, this.context);
+        HSLogger.debug('Switched Ambrosia loadout to ' + slotEnum, this.context);
     }
 
     async #createPersistentQuickbarContainer() {

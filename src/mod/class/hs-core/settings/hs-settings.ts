@@ -1464,7 +1464,12 @@ export class HSSettings extends HSModule {
             101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
             110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
             119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902
+            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
+            200: 200, 202: 202,
+            // New-only IDs added after migration era — no old equivalent
+            154: 154, 155: 155,
+            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
+            903: 903
         };
 
         const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
@@ -1472,7 +1477,7 @@ export class HSSettings extends HSModule {
 
         const allIds: number[] = [];
         const collectIds = (challenge: any) => {
-            if (challenge.challengeNumber) allIds.push(challenge.challengeNumber);
+            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
         };
         strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
         strategy.aoagPhase?.strat?.forEach(collectIds);
@@ -1534,7 +1539,11 @@ export class HSSettings extends HSModule {
             101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
             110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
             119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902
+            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
+            // New-only IDs added after migration era — no old equivalent, pass through unchanged
+            154: 154, 155: 155, 200: 200, 202: 202,
+            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
+            903: 903
         };
         const newToOldActionIds = Object.fromEntries(
             Object.entries(oldToNewActionIds).map(([oldId, newId]) => [newId, Number(oldId)])
@@ -1544,10 +1553,10 @@ export class HSSettings extends HSModule {
         const oldOnlyIdSet = new Set<number>([...oldIdSet].filter(id => !newIdSet.has(id)));
         const newOnlyIdSet = new Set<number>([...newIdSet].filter(id => !oldIdSet.has(id)));
 
-        // Gather all challengeNumbers in the strategy
+        // Gather all special action challengeNumbers (>= 100) in the strategy
         const allIds: number[] = [];
         const collectIds = (challenge: any) => {
-            if (challenge.challengeNumber) allIds.push(challenge.challengeNumber);
+            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
         };
         strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
         strategy.aoagPhase?.strat?.forEach(collectIds);
@@ -1563,6 +1572,7 @@ export class HSSettings extends HSModule {
         let newOnlyCount = 0;
         let sharedCount = 0;
         let unknownCount = 0;
+        const unknownIds: number[] = [];
 
         for (const id of allIds) {
             const isOld = oldIdSet.has(id);
@@ -1576,6 +1586,7 @@ export class HSSettings extends HSModule {
                 newOnlyCount++;
             } else {
                 unknownCount++;
+                unknownIds.push(id);
             }
         }
 
@@ -1584,25 +1595,26 @@ export class HSSettings extends HSModule {
         const allMatchOldState = hasOldOnly && !hasNewOnly;
         const allMatchNewState = hasNewOnly && !hasOldOnly;
         const allShared = !hasOldOnly && !hasNewOnly && sharedCount > 0;
+        const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
 
         if (allMatchOldState) {
             HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount})`,
+                `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
                 'HSSettings'
             );
         } else if (allMatchNewState) {
             HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount})`,
+                `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
                 'HSSettings'
             );
         } else if (allShared) {
             HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount})`,
+                `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
                 'HSSettings'
             );
         } else {
             HSLogger.warn(
-                `Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount})`,
+                `Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
                 'HSSettings'
             );
         }

@@ -80,7 +80,7 @@ export class HSLogger {
                     break;
             }
 
-            // We add hs-log-ts-hidden to the timestamp span if the setting to show log timestamps is enabled
+            // We add hs-log-ts-hidden to the timestamp span if the setting to show log timestamps is disabled
             const hiddenTS = this.#displayTimestamp ? "" : "hs-log-ts-hidden";
             const moduleFromContext = HSModuleManager.getModule(context);
 
@@ -204,7 +204,7 @@ export class HSLogger {
 
     static debug(msg: string, context: string = "HSMain", isImportant: boolean = false) {
         if (this.#isDebugEnabled()) {
-            console.log(`DBG [${context}]: ${HSUtils.removeColorTags(msg)}`);
+            console.log(`DBG [${context}][${HSUtils.getTime()}]: ${HSUtils.removeColorTags(msg)}`);
             this.#logToUi(msg, context, ELogType.DEBUG);
         }
     }
