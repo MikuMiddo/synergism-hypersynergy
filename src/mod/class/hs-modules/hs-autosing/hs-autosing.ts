@@ -394,20 +394,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.performAutosingLogic();
     }
 
-    public stopAutosing(options?: { showReviewModal?: boolean; syncSetting?: boolean }): void {
+    public stopAutosing(options?: { showReviewModal?: boolean }): void {
         const showReviewModal = options?.showReviewModal ?? false;
-        const syncSetting = options?.syncSetting ?? true;
 
         this.stopAutosingCore({
             modalDisposition: showReviewModal ? 'review' : 'destroy'
         });
 
-        if (syncSetting) {
             const singSetting = HSSettings.getSetting("startAutosing");
             if (singSetting && singSetting.isEnabled()) {
                 singSetting.disable();
             }
-        }
 
         HSLogger.log(`Autosing stopped.`, this.context);
     }
