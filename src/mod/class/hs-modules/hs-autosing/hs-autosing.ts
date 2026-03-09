@@ -451,8 +451,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar');
         if (quickbarSetting && !quickbarSetting.isEnabled()) {
-            HSUI.Notify("You need to enable the ambrosia quickbar setting before you can use autosing.");
-            return false;
+            HSLogger.log("Autosing requirement: Enabling Ambrosia Quick Bar now.", this.context);
+            quickbarSetting.enable();
         }
 
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
@@ -520,9 +520,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (!strategy) {
             HSLogger.debug(`Autosing: Strategy "${selectedRawName}" not found or failed to load.`, this.context);
             HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
+            return null;
         }
 
-        return strategy;
+        // Strategies are stored with OLD special action IDs for cross-version compatibility.
+        // Migrate to new IDs in-memory only — this copy is never persisted.
+        const runtimeStrategy: HSAutosingStrategy = JSON.parse(JSON.stringify(strategy));
+        HSSettings.migrateStrategyActionIdsAuto(runtimeStrategy, 'toNew');
+        HSLogger.log(`Autosing: loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory)`, this.context);
+
+        return runtimeStrategy;
     }
 
     private async loadAmbrosiaLoadoutButtons(): Promise<void> {

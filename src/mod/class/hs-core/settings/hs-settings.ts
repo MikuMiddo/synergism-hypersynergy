@@ -910,12 +910,14 @@ export class HSSettings extends HSModule {
         let normalizedStrategy = HSSettings.ensureAoagPhase(strategy);
         normalizedStrategy = HSSettings.ensureCorruptionLoadouts(normalizedStrategy);
 
-        const beforeMigration = JSON.stringify(normalizedStrategy);
-        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, true);
-        if (beforeMigration !== JSON.stringify(normalizedStrategy)) {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: migrated strategy "${normalizedStrategy.strategyName}" to new special action IDs`, HSSettings.#staticContext);
+        // Always persist strategies with OLD special action IDs so they remain
+        // usable by other mod versions or by players without this mod.
+        const beforeNormalize = JSON.stringify(normalizedStrategy);
+        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toOld');
+        if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" back to old special action IDs`, HSSettings.#staticContext);
         } else {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" did not require migration (already using new special action IDs)`, HSSettings.#staticContext);
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses old special action IDs — no change needed`, HSSettings.#staticContext);
         }
 
         this.validateStrategy(normalizedStrategy);
@@ -1355,18 +1357,20 @@ export class HSSettings extends HSModule {
             const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
             const didDropDefaults = userStrategies.length !== list.length;
 
-            // Migrate old action IDs to new ones for all user strategies
-            let didMigrate = false;
+            // Normalize all user strategies to OLD special action IDs so that
+            // localStorage is always mod-version-agnostic (usable without this mod).
+            // Any strategies that were previously saved with new IDs get converted back.
+            let didNormalize = false;
             for (const strategy of userStrategies) {
                 const before = JSON.stringify(strategy);
-                HSSettings.migrateStrategyActionIdsAuto(strategy, true);
+                HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
                 if (before !== JSON.stringify(strategy)) {
-                    didMigrate = true;
+                    didNormalize = true;
                 }
             }
 
-            // Save back if defaults were removed or any migration was done
-            if (didDropDefaults || didMigrate) {
+            // Save back if defaults were dropped or any ID normalization occurred
+            if (didDropDefaults || didNormalize) {
                 storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
             }
 
@@ -1417,7 +1421,7 @@ export class HSSettings extends HSModule {
         let migratedStrategies = 0;
         for (const strategy of userStrategies) {
             const before = JSON.stringify(strategy);
-            HSSettings.migrateStrategyActionIdsAuto(strategy, false);
+            HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
             if (before !== JSON.stringify(strategy)) {
                 migratedStrategies++;
             }
@@ -1523,8 +1527,9 @@ export class HSSettings extends HSModule {
         return { state: 'invalid', reason: 'shared-and-unknown-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
     }
 
-    // Migrates old action IDs to new ones or vice versa
-    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, oldToNewOnly: boolean = false): HSAutosingStrategy {
+    // Migrates strategy special action IDs either entirely to new IDs ('toNew') or entirely to old IDs ('toOld').
+    // Skips without mutating if the strategy is already in the target state.
+    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld'): HSAutosingStrategy {
         const oldToNewActionIds: Record<number, number> = {
             101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
             110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
@@ -1603,25 +1608,33 @@ export class HSSettings extends HSModule {
         }
 
         HSLogger.debug(
-            `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, oldToNewOnly=${oldToNewOnly}`,
+            `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`,
             'HSSettings'
         );
 
-        // Decide direction (strict state-based, not count heuristic)
+        // Decide direction based on explicit target — caller always knows which state they want.
         let map: Record<number, number> | null = null;
         let direction: 'old->new' | 'new->old' | 'none' = 'none';
 
-        if (hasOldOnly && !hasNewOnly) {
-            map = oldToNewActionIds;
-            direction = 'old->new';
-        } else if (hasNewOnly && !hasOldOnly) {
-            if (oldToNewOnly) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}" is already using the new SA IDs.`, 'HSSettings');
+        if (target === 'toNew') {
+            if (hasNewOnly && !hasOldOnly) {
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, 'HSSettings');
                 return strategy;
+            } else if (hasOldOnly && !hasNewOnly) {
+                map = oldToNewActionIds;
+                direction = 'old->new';
             }
-            map = newToOldActionIds;
-            direction = 'new->old';
-        } else {
+        } else { // target === 'toOld'
+            if (hasOldOnly && !hasNewOnly) {
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, 'HSSettings');
+                return strategy;
+            } else if (hasNewOnly && !hasOldOnly) {
+                map = newToOldActionIds;
+                direction = 'new->old';
+            }
+        }
+
+        if (!map) {
             if (hasOldOnly && hasNewOnly) {
                 HSLogger.warn(
                     `Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`,
