@@ -53,17 +53,6 @@ export class HSGameState extends HSModule {
         'pseudoCoins',
     ];
 
-    #debugThrottleState = new Map<string, { lastMessage: string; lastTime: number }>();
-
-    #debugThrottled(key: string, message: string, minIntervalMs: number = 300): void {
-        const now = performance.now();
-        const previous = this.#debugThrottleState.get(key);
-        if (!previous || previous.lastMessage !== message || now - previous.lastTime >= minIntervalMs) {
-            this.#debugThrottleState.set(key, { lastMessage: message, lastTime: now });
-            HSLogger.debug(message, this.context);
-        }
-    }
-
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
     }
@@ -85,12 +74,7 @@ export class HSGameState extends HSModule {
                     if (uiView.getId() !== MAIN_VIEW.UNKNOWN) {
                         self.#viewStates.MAIN_VIEW.previousView = self.#viewStates.MAIN_VIEW.currentView;
                         self.#viewStates.MAIN_VIEW.currentView = uiView;
-                        self.#debugThrottled(
-                            'main-view-change',
-                            `Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`,
-                            200
-                        );
-
+                        HSLogger.debug(`Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
                     } else {
                         HSLogger.warn(`Main UI view ${view} not found`, self.context);
                         return;
@@ -181,16 +165,6 @@ export class HSGameState extends HSModule {
                                     HSLogger.error(`Error when trying to call CUBE VIEW change subscriber callback: ${e}`, self.context);
                                 }
                             });
-
-                            self.#debugThrottled(
-                                `subview-change-${viewKey}`,
-                                `Subview changed ${previousView.getName()} -> ${currentView.getName()}`,
-                                200
-                            );
-
-                        } else {
-                            HSLogger.warn(`Subview ${view} not found`, self.context);
-                            return;
                         }
                     }
                 },

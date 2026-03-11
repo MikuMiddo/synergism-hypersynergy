@@ -1571,9 +1571,7 @@ export class HSAutosingModal {
      * Show the modal. Computes and applies width on first open, then displays the modal.
      */
     public show(): void {
-        // this.ensureCreated();
         if (!this.timerDisplay) { return; }
-
 
         // On first open, compute and apply an appropriate width so that
         // every strategy phase fits on a single line and graphs match.

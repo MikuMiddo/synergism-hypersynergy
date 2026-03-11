@@ -325,10 +325,6 @@ export class HSAmbrosia extends HSModule
                 const iconEnum = this.#getIconEnumById(e.dataTransfer.getData('hs-amb-drag'));
                 const slotElement = e.target as HTMLButtonElement;
 
-                console.log('Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
-                console.log('Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
-                console.log('Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
-
                 // Use dataset.originalId if present, else fallback to id
                 const slotElementId = slotElement.dataset.originalId || slotElement.id;
                 if (!iconEnum) {

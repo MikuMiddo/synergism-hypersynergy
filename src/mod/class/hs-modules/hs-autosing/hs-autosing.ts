@@ -338,11 +338,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async enableAutoSing(): Promise<void> {
         if (!HSGlobal.General.isModFullyLoaded) {
             HSUI.Notify("Hypersynergism is still loading. Please wait before starting Auto-Sing.", { notificationType: "warning" });
+            this.stopAutosing();
             return;
         }
 
         if (this.isInExalt()) {
             HSUI.Notify("Cannot start Auto-Sing while inside a singularity challenge.", { notificationType: "warning" });
+            this.stopAutosing();
             return;
         }
 
@@ -494,7 +496,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const control = strategySetting.getDefinition().settingControl;
 
         if (!control?.selectOptions) {
-            HSUI.Notify("Strategy selector not available", { notificationType: "warning" });
+            HSUI.Notify("Strategy selector not available - Autosing stopped.", { notificationType: "warning" });
+            this.stopAutosing();
             return null;
         }
 
@@ -503,7 +506,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         );
 
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found - Autosing stopped", { notificationType: "warning" });
+            HSUI.Notify("Selected strategy not found - Autosing stopped.", { notificationType: "warning" });
+            this.stopAutosing();
             return null;
         }
 
@@ -520,7 +524,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         if (!strategy) {
             HSLogger.debug(`Autosing: Strategy "${selectedRawName}" not found or failed to load.`, this.context);
-            HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
+            HSUI.Notify("Could not find or load strategy - Autosing stopped.", { notificationType: "warning" });
+            this.stopAutosing();
             return null;
         }
 
@@ -551,7 +556,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_luck) {
             HSLogger.debug("Autosing: Required Ambrosia loadout buttons missing.", this.context);
-            HSUI.Notify("Could not find all required Ambrosia loadout buttons", { notificationType: "warning" });
+            HSUI.Notify("Could not find all required Ambrosia loadout buttons - Autosing stopped.", { notificationType: "warning" });
+            this.stopAutosing();
             throw new Error("Missing ambrosia loadout buttons");
         }
     }
@@ -606,7 +612,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (stage === 'final') {
             phaseConfig = this.finalPhaseConfig ?? null;
             if (!phaseConfig) {
-                HSLogger.debug("No final phase found in strategy", this.context);
+                HSLogger.debug("No final phase found in strategy - Autosing stopped.", this.context);
+                this.stopAutosing();
                 return;
             }
 
@@ -638,7 +645,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const stageEndIndex: number = this.getPhaseIndex(stageEnd);
 
         if (stageStartIndex === -1 || stageEndIndex === -1) {
-            HSLogger.debug(`Unknown stage ${stage}`, this.context);
+            HSLogger.debug(`Unknown stage ${stage} - Autosing stopped.`, this.context);
+            this.stopAutosing();
             return;
         }
 
@@ -646,7 +654,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         phaseConfig = ranges.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
 
         if (!phaseConfig) {
-            HSLogger.debug(`No strategy phase matched for stage ${stage}`, this.context);
+            HSLogger.debug(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context);
+            this.stopAutosing();
             return;
         }
 
@@ -708,8 +717,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.endStageDone = true;
         }
         
-        // setTimeout to avoid loosing ~2ms in the critical path ?...
-        setTimeout(() => this.autosingModal?.recordPhase(phaseLabel), 0);
+        this.autosingModal?.recordPhase(phaseLabel);
     }
 
     private async executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number): Promise<number | null> {
@@ -926,8 +934,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-
-
     private async waitForCompletion(
         challengeIndex: number,
         minCompletions: number,
@@ -943,12 +949,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const getGoal = accessor.getGoal;
 
         if (!challengeBtn) {
-            HSLogger.debug(`Challenge button ${challengeIndex} not found`, this.context);
+            HSLogger.debug(`Challenge button ${challengeIndex} not found - Autosing stopped.`, this.context);
+            this.stopAutosing();
             return;
         }
 
         if (!accessor.levelElement) {
-            HSLogger.debug(`Challenge level element ${challengeIndex} not found`, this.context);
+            HSLogger.debug(`Challenge level element ${challengeIndex} not found - Autosing stopped.`, this.context);
+            this.stopAutosing();
             return;
         }
 
@@ -1243,22 +1251,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private antiBuyCoinBugViaExpose(initialDelayMs = 0, intervalMs = 10, stableMs = 200): void {
-        HSLogger.debug(`antiBuyCoinBugViaExpose: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, stops after ${stableMs}ms stable`, this.context);
-
         window.setTimeout(() => {
-            const snapBefore = this.getGameDataSnapshot();
-            const snapshotAgeMs = this.latestGameDataSnapshotTimestamp
-                ? Date.now() - this.latestGameDataSnapshotTimestamp
-                : -1;
-            HSLogger.debug(
-                `antiBuyCoinBugViaExpose PRE-BURST STATE (after ${initialDelayMs}ms delay):\n` +
-                `  snapshot age: ${snapshotAgeMs}ms (stale if >1000)\n` +
-                `  upgrades[81]: ${snapBefore?.upgrades?.['81'] ?? 'N/A'} (1=bought, 0=not bought)\n` +
-                `  PP/diamonds: ${snapBefore?.prestigePoints ?? 'N/A'} (need >=1000 to buy upg81)\n` +
-                `  coins: ${snapBefore?.coins ?? 'N/A'}\n` +
-                `  firstOwnedCoin: ${snapBefore?.firstOwnedCoin ?? 'N/A'}`, this.context
-            );
-
             let attempt = 0;
             let stableAt: number | null = null; // timestamp when upgrades[81] first became 1
 
@@ -1268,33 +1261,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 //const result = (window as any).__HS_GAME_API?.ensureWorkerAutobuyer?.();
                 const result = (window as any).__HS_GAME_API?.checkWorkerAutobuyer?.();
                 const snapAttempt = this.getGameDataSnapshot();
-                const snapshotAgeMs = this.latestGameDataSnapshotTimestamp
-                    ? Date.now() - this.latestGameDataSnapshotTimestamp
-                    : -1;
                 const upg81 = snapAttempt?.upgrades?.['81'] ?? 'N/A';
-
-                HSLogger.debug(
-                    `antiBuyCoinBugViaExpose: try ${attempt} — ` +
-                    `snapshot age: ${snapshotAgeMs}ms, ` +
-                    `upgrades[81]: ${upg81}, ` +
-                    `PP/diamonds: ${snapAttempt?.prestigePoints ?? 'N/A'}, ` +
-                    `coins: ${snapAttempt?.coins ?? 'N/A'}, ` +
-                    `firstOwnedCoin: ${snapAttempt?.firstOwnedCoin ?? 'N/A'}.`, this.context
-                );
 
                 if (upg81 === 1) {
                     if (stableAt === null) stableAt = Date.now();
                     const stableForMs = Date.now() - stableAt;
                     if (stableForMs >= stableMs) {
                         window.clearInterval(intervalId);
-                        const snapAfter = this.getGameDataSnapshot();
-                        HSLogger.debug(
-                            `antiBuyCoinBugViaExpose: upgrades[81] stable for ${stableForMs}ms — done. ` +
-                            `  upgrades[81]: ${snapAfter?.upgrades?.['81'] ?? 'N/A'}\n` +
-                            `  PP/diamonds: ${snapAfter?.prestigePoints ?? 'N/A'}\n` +
-                            `  coins: ${snapAfter?.coins ?? 'N/A'}\n` +
-                            `  firstOwnedCoin: ${snapAfter?.firstOwnedCoin ?? 'N/A'}`, this.context
-                        );
                     }
                 } else {
                     stableAt = null; // reset if it flipped back to 0
@@ -1446,12 +1419,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const gqGain = Math.max(0, gqAfter - gqBefore);
         const qGain = Math.max(0, qAfter - qBefore);
 
-        // setTimeout to avoid loosing ~2ms in the critical path ?...
-        setTimeout(() => {
-            if (!skipRecord) {
-                this.autosingModal?.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
-            }
-        }, 0);
+        if (this.autosingModal && !skipRecord) {
+            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
+        }
 
         prevMainView.goto();
         HSLogger.debug("Singularity performed", this.context);
@@ -1645,24 +1615,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // ============================================================================
     // UTILITY & HELPERS
     // ============================================================================
-
-    private async buyCoin(): Promise<void> {
-        let coins = await this.getCoins();
-        while (coins < 1000 && this.autosingEnabled) {
-            await HSUtils.click(this.coin);
-            coins = await this.getCoins();
-        }
-    }
-
-    private async getCoins(): Promise<number> {
-        return this.getCoinsViaGDS();
-    }
-
-    private async getCoinsViaGDS(): Promise<number> {
-        const data = this.getGameDataSnapshot();
-        if (!data || data.coins === undefined) return 0;
-        return new Decimal(data.coins).toNumber();
-    }
 
     private async useAddAndTimeCodes(): Promise<void> {
         if (this.addCodeAllBtn) this.addCodeAllBtn.click();
