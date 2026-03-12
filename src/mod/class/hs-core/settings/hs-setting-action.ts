@@ -268,7 +268,7 @@ export class HSSettingActions {
         },
 
         eventQuickBarAction: async (params: HSSettingActionParams) => {
-            /* to do */
+            /* to  do */
         }
     }
 
