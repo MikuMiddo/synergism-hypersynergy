@@ -23,12 +23,8 @@ export class HSLogger {
 
     static #lastLogHash = -1;
     static #displayTimestamp: boolean = false;
-    static #debugEnabledCache = false;
-    static #debugEnabledCacheAt = 0;
-    static #debugEnabledCacheMs = 250;
 
     static #oneShotLogHistory: Map<string, { logged: boolean, timestamp: number, level: ELogType, count: number }> = new Map();
-    static #oneShotLogHistoryIvl?: number;
 
     // Integrates the logger to the mod's UI panel's Log tab
     static async integrateToUI(hsui: HSUI) {

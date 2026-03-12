@@ -215,8 +215,8 @@ export async function openAutosingChallengesModal(
         ? `
             <option value="" disabled>-- Corruption Loadouts --</option>
             ${corruptionLoadouts
-                .map(loadout => `<option value="loadout:${loadout.name}">Load Corruption Loadout: ${loadout.name}</option>`)
-                .join("")}
+            .map(loadout => `<option value="loadout:${loadout.name}">Load Corruption Loadout: ${loadout.name}</option>`)
+            .join("")}
         `
         : "";
 
@@ -596,32 +596,39 @@ export async function openAutosingChallengesModal(
         });
 
         // Drag logic for separator (inserting new items)
-        const separator = document.querySelector('.hs-challenge-separator') as HTMLElement;
-        if (!separator) return;
-        separator.addEventListener('mousedown', (e) => {
+        // Uses the same pattern as challenge drag: after each re-render, re-find the new
+        // separator element and restore its floating state so it doesn't detach from view.
+        const separatorEl = document.querySelector('.hs-challenge-separator') as HTMLElement;
+        if (!separatorEl) return;
+        let activeSeparator = separatorEl;
+
+        separatorEl.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            separator.style.position = 'fixed';
-            separator.style.zIndex = '1000';
-            separator.style.cursor = 'grabbing';
-            separator.style.width = separator.offsetWidth + 'px';
-            separator.style.height = separator.offsetHeight + 'px';
-            separator.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
-            separator.style.transform = 'scale(1.05)';
-            separator.style.transition = 'transform 0.15s ease';
+            const originalWidth = activeSeparator.offsetWidth;
+            const originalHeight = activeSeparator.offsetHeight;
+
+            const applySeparatorDragStyles = (el: HTMLElement) => {
+                el.style.position = 'fixed';
+                el.style.zIndex = '1000';
+                el.style.cursor = 'grabbing';
+                el.style.width = originalWidth + 'px';
+                el.style.height = originalHeight + 'px';
+                el.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+                el.style.transform = 'scale(1.05)';
+                el.style.transition = 'transform 0.15s ease';
+            };
+
+            applySeparatorDragStyles(activeSeparator);
 
             const moveAt = (clientX: number, clientY: number) => {
-                separator.style.left = clientX - separator.offsetWidth / 2 + 'px';
-                separator.style.top = clientY - separator.offsetHeight / 2 + 'px';
+                activeSeparator.style.left = clientX - originalWidth / 2 + 'px';
+                activeSeparator.style.top = clientY - originalHeight / 2 + 'px';
             };
             moveAt(e.clientX, e.clientY);
 
             const onMouseMove = throttle((e: MouseEvent) => {
                 moveAt(e.clientX, e.clientY);
-                separator.style.display = 'none';
-                const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
-                separator.style.display = '';
-                if (!elemBelow) return;
-                // Find closest .hs-challenge-item or separator
+
                 const container = document.getElementById('hs-challenge-list-container');
                 if (!container) return;
                 const allItems = Array.from(container.querySelectorAll('.hs-challenge-item'));
@@ -633,28 +640,43 @@ export async function openAutosingChallengesModal(
                         break;
                     }
                 }
+                if (newIndex === separatorIndex) return;
                 separatorIndex = newIndex;
-                updateUI();
+
+                // Re-render the list (destroys old separator element), then re-find
+                // the new separator and restore its floating styles so it stays visible.
+                const savedScroll = container.scrollTop;
+                container.innerHTML = renderChallengeList();
+                container.scrollTop = savedScroll;
+                attachDragListeners();
+                attachHoverListeners();
+
+                const newSep = container.querySelector('.hs-challenge-separator') as HTMLElement;
+                if (newSep) {
+                    activeSeparator = newSep;
+                    applySeparatorDragStyles(newSep);
+                }
+                moveAt(e.clientX, e.clientY);
             }, 16);
 
             const onMouseUp = () => {
-                separator.style.position = '';
-                separator.style.zIndex = '';
-                separator.style.cursor = '';
-                separator.style.width = '';
-                separator.style.height = '';
-                separator.style.boxShadow = '';
-                separator.style.transform = '';
-                separator.style.left = '';
-                separator.style.top = '';
-                separator.style.transition = '';
+                activeSeparator.style.position = '';
+                activeSeparator.style.zIndex = '';
+                activeSeparator.style.cursor = '';
+                activeSeparator.style.width = '';
+                activeSeparator.style.height = '';
+                activeSeparator.style.boxShadow = '';
+                activeSeparator.style.transform = '';
+                activeSeparator.style.left = '';
+                activeSeparator.style.top = '';
+                activeSeparator.style.transition = '';
                 document.removeEventListener('mousemove', onMouseMove as any);
                 document.removeEventListener('mouseup', onMouseUp);
             };
             document.addEventListener('mousemove', onMouseMove as any);
             document.addEventListener('mouseup', onMouseUp);
         });
-        separator.style.cursor = 'grab';
+        separatorEl.style.cursor = 'grab';
     };
 
     // Update input state: disables/enables fields based on selected action type

@@ -8,11 +8,8 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
  * Description: Automates, corrects, and manages game settings for AutoSing.
  * Author: Copilot (based on HSQOLButtons)
  */
-export class HSAutosingSettingsFixer extends HSModule {
-    init(): Promise<void> {
-        HSLogger.log('HSAutosingSettingsFixer fake-load', "HSAutosingSettingsFixer");
-        return Promise.resolve();
-    }
+export class HSAutosingSettingsFixer {
+
 
     /**
      * List of toggle requirements: selector and expected text.
@@ -122,37 +119,23 @@ export class HSAutosingSettingsFixer extends HSModule {
     ];
 
     /**
-     * Constructs the HSAutosingSettingsFixer and logs initialization.
-     * @param moduleOptions Options for module configuration and context.
-     */
-    constructor(moduleOptions: HSModuleOptions) {
-        super(moduleOptions);
-        HSLogger.log('HSAutosingSettingsFixer initialized', "HSAutosingSettingsFixer");
-    }
-
-    /**
-     * Initialize the fixer: ensure toggles, percent elements, and text fields are correct.
-     */
-
-
-    /**
      * Public API to run all setting fixes. Can be invoked repeatedly without
      * reconstructing the fixer instance.
      */
-    public async fixAllSettings(): Promise<void> {
-        await this.ensureAllTogglesOn();
-        await this.ensurePercentSuffixElements();
-        await this.ensureGreenButtons();
-        await this.ensureChallengeAutoStates();
-        await this.ensureNumberInputFields();
-        await this.disableUnwantedSettings();
+    public static async fixAllSettings(): Promise<void> {
+        await HSAutosingSettingsFixer.ensureAllTogglesOn();
+        await HSAutosingSettingsFixer.ensurePercentSuffixElements();
+        await HSAutosingSettingsFixer.ensureGreenButtons();
+        await HSAutosingSettingsFixer.ensureChallengeAutoStates();
+        await HSAutosingSettingsFixer.ensureNumberInputFields();
+        await HSAutosingSettingsFixer.disableUnwantedSettings();
     }
 
     /**
      * List of number input fields and their expected values retrieved from HSSettings.
      * Each entry specifies a selector and the value to set.
      */
-    private getRequirementsFromSettings(): Array<{ selector: string, expected: number }> {
+    private static getRequirementsFromSettings(): Array<{ selector: string, expected: number }> {
         if (!HSSettings || typeof HSSettings.getSetting !== 'function') {
             HSLogger.error('HSSettings is not initialized!', "HSAutosingSettingsFixer");
             return [];
@@ -186,7 +169,7 @@ export class HSAutosingSettingsFixer extends HSModule {
      * Ensure all toggles are in their required state by checking text and clicking if needed.
      * If the text does not match the expected value, the button is clicked to toggle it.
      */
-    public async ensureAllTogglesOn(): Promise<void> {
+    public static async ensureAllTogglesOn(): Promise<void> {
         const corrected: string[] = [];
         const failed: string[] = [];
 
@@ -222,7 +205,7 @@ export class HSAutosingSettingsFixer extends HSModule {
      * Ensure all elements in PERCENT_SUFFIX_ELEMENTS have text ending with '%'.
      * If not, click the element to try to correct it.
      */
-    private async ensurePercentSuffixElements(): Promise<void> {
+    private static async ensurePercentSuffixElements(): Promise<void> {
         const corrected: string[] = [];
         const failed: string[] = [];
 
@@ -255,8 +238,8 @@ export class HSAutosingSettingsFixer extends HSModule {
      * Ensure all number input fields have their expected value.
      * If not, set the value.
      */
-    private async ensureNumberInputFields(): Promise<void> {
-        const requirements = [...this.getRequirementsFromSettings(), ...HSAutosingSettingsFixer.UPDATE_ON_BLUR_REQUIREMENTS];
+    private static async ensureNumberInputFields(): Promise<void> {
+        const requirements = [...HSAutosingSettingsFixer.getRequirementsFromSettings(), ...HSAutosingSettingsFixer.UPDATE_ON_BLUR_REQUIREMENTS];
 
         const matches = (current: string, expected: any): boolean => {
             if (typeof expected === 'number') {
@@ -274,18 +257,18 @@ export class HSAutosingSettingsFixer extends HSModule {
 
             const elInitial = document.querySelector(req.selector) as HTMLInputElement | null;
             if (!elInitial) {
-                HSLogger.warn(`ensureNumberInputFields: element not found: ${req.selector}`, this.context);
+                HSLogger.warn(`ensureNumberInputFields: element not found: ${req.selector}`, "HSAutosingSettingsFixer");
                 continue;
             }
             if (matches(elInitial.value, req.expected)) continue;
 
-            HSLogger.warn(`ensureNumberInputFields: mismatch ${req.selector}: current='${elInitial.value}' expected='${expectedStr}'`, this.context);
+            HSLogger.warn(`ensureNumberInputFields: mismatch ${req.selector}: current='${elInitial.value}' expected='${expectedStr}'`, "HSAutosingSettingsFixer");
 
             let success = false;
             for (let attempt = 1; attempt <= 3; attempt++) {
                 const el = document.querySelector(req.selector) as HTMLInputElement | null;
                 if (!el) {
-                    HSLogger.warn(`ensureNumberInputFields: element disappeared on attempt ${attempt}: ${req.selector}`, this.context);
+                    HSLogger.warn(`ensureNumberInputFields: element disappeared on attempt ${attempt}: ${req.selector}`, "HSAutosingSettingsFixer");
                     break;
                 }
 
@@ -303,7 +286,7 @@ export class HSAutosingSettingsFixer extends HSModule {
 
                 const updatedEl = document.querySelector(req.selector) as HTMLInputElement | null;
                 if (!updatedEl) {
-                    HSLogger.warn(`ensureNumberInputFields: element disappeared after blur on attempt ${attempt}: ${req.selector}`, this.context);
+                    HSLogger.warn(`ensureNumberInputFields: element disappeared after blur on attempt ${attempt}: ${req.selector}`, "HSAutosingSettingsFixer");
                     break;
                 }
 
@@ -311,7 +294,7 @@ export class HSAutosingSettingsFixer extends HSModule {
                     success = true;
                     break;
                 }
-                HSLogger.warn(`ensureNumberInputFields: attempt ${attempt} failed for ${req.selector}: got='${updatedEl.value}' expected='${expectedStr}'`, this.context);
+                HSLogger.warn(`ensureNumberInputFields: attempt ${attempt} failed for ${req.selector}: got='${updatedEl.value}' expected='${expectedStr}'`, "HSAutosingSettingsFixer");
             }
 
             if (success) {
@@ -322,9 +305,9 @@ export class HSAutosingSettingsFixer extends HSModule {
         }
 
         if (corrected.length > 0 || failed.length > 0) {
-            HSLogger.warn(`ensureNumberInputFields: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, this.context);
+            HSLogger.warn(`ensureNumberInputFields: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, "HSAutosingSettingsFixer");
         } else {
-            HSLogger.debug(`ensureNumberInputFields: all elements already correct`, this.context);
+            HSLogger.debug(`ensureNumberInputFields: all elements already correct`, "HSAutosingSettingsFixer");
         }
     }
 
@@ -332,7 +315,7 @@ export class HSAutosingSettingsFixer extends HSModule {
      * Ensure all elements in GREEN_BUTTONS have style 'background-color: green;'.
      * If not, set the style attribute accordingly.
      */
-    private async ensureGreenButtons(): Promise<void> {
+    private static async ensureGreenButtons(): Promise<void> {
         const corrected: string[] = [];
         const failed: string[] = [];
 
@@ -365,7 +348,7 @@ export class HSAutosingSettingsFixer extends HSModule {
      * Ensure challenge auto states for challenge 1-15.
      * For 1-10: ON, (for 11-15: OFF maybe later if needed). Logs all failures and missing elements.
      */
-    private async ensureChallengeAutoStates(): Promise<void> {
+    private static async ensureChallengeAutoStates(): Promise<void> {
         const corrected: string[] = [];
         const failed: string[] = [];
 
@@ -413,7 +396,7 @@ export class HSAutosingSettingsFixer extends HSModule {
         }
     }
 
-    private async disableUnwantedSettings(): Promise<void> {
+    private static async disableUnwantedSettings(): Promise<void> {
         const performanceSettingKeys = [
             'enableAutomationQuickBar',
             'ambrosiaMinibars',

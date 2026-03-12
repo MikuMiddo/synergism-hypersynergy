@@ -15,7 +15,6 @@ import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
-import { PlayerData } from "../../../types/data-types/hs-player-savedata";
 
 /*
     Class: HSAutosing
@@ -52,8 +51,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private gameDataAPI?: HSGameDataAPI;
     private gameDataResolver?: (value: void) => void;
-    private latestGameDataSnapshot?: PlayerData;
-    private latestGameDataSnapshotTimestamp?: number;
 
     private strategy?: HSAutosingStrategy;
     private loadoutByName: Map<string, CorruptionLoadout> = new Map();
@@ -142,7 +139,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // Module References
     private stageFunc!: (arg0: number) => any;
     private gamestate!: HSGameState;
-    private autosingSettingsFixer?: HSAutosingSettingsFixer;
+
     private autosingModal?: HSAutosingModal;
 
     // Strategy Caches
@@ -157,7 +154,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     init(): Promise<void> {
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
-        this.autosingSettingsFixer = new HSAutosingSettingsFixer({ moduleName: 'HSAutosingSettingsFixer', context: this.context });
 
         this.autosingEnabled = false;
         this.targetSingularity = 0;
@@ -304,31 +300,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     gameDataCallback(): Promise<void> {
-        this.refreshGameDataSnapshot();
         if (this.gameDataResolver) {
             this.gameDataResolver();
             this.gameDataResolver = undefined;
         }
         return Promise.resolve();
-    }
-
-    private refreshGameDataSnapshot(): void {
-        if (this.gameDataAPI) {
-            const data = this.gameDataAPI.getGameData();
-            this.latestGameDataSnapshot = data;
-            if (typeof data !== 'undefined') {
-                this.latestGameDataSnapshotTimestamp = Date.now();
-            }
-        }
-    }
-
-    private getGameDataSnapshot(): PlayerData | undefined {
-        const now = Date.now();
-        const ageMs = this.latestGameDataSnapshotTimestamp ? now - this.latestGameDataSnapshotTimestamp : Infinity;
-        if (!this.latestGameDataSnapshot || ageMs > 1000) {
-            this.refreshGameDataSnapshot();
-        }
-        return this.latestGameDataSnapshot;
     }
 
     // ============================================================================
@@ -358,13 +334,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        this.refreshGameDataSnapshot();
         this.subscribeGameDataChanges();
         await new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
         });
-        this.refreshGameDataSnapshot();
-        const gameData = this.getGameDataSnapshot();
+        const gameData = this.gameDataAPI?.getGameData();
 
         if (!await this.validateSingularityRequirements(gameData)) {
             this.stopAutosing();
@@ -388,10 +362,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.autosingModal?.destroy();
         this.autosingModal = new HSAutosingModal();
 
-        if (!this.autosingSettingsFixer) {
-            this.autosingSettingsFixer = new HSAutosingSettingsFixer({ moduleName: 'HSAutosingSettingsFixer', context: this.context });
-        }
-        await this.autosingSettingsFixer.fixAllSettings();
+        await HSAutosingSettingsFixer.fixAllSettings();
 
         this.performAutosingLogic();
     }
@@ -404,10 +375,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             modalDisposition: showReviewModal ? 'review' : 'destroy'
         });
 
-            const singSetting = HSSettings.getSetting("startAutosing");
-            if (singSetting && singSetting.isEnabled()) {
-                singSetting.disable();
-            }
+        const singSetting = HSSettings.getSetting("startAutosing");
+        if (singSetting && singSetting.isEnabled()) {
+            singSetting.disable();
+        }
 
         HSLogger.log(`Autosing stopped.`, this.context);
     }
@@ -716,7 +687,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (phaseConfig.endPhase == "end") {
             this.endStageDone = true;
         }
-        
+
         this.autosingModal?.recordPhase(phaseLabel);
     }
 
@@ -968,20 +939,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(5);
         }
 
+        this.fastDoubleClick(challengeBtn);
         while (!isActive()) {
-            this.fastDoubleClick(challengeBtn);
             if (isActive()) {
                 break;
             }
-            await HSUtils.sleep(5);
+            await HSUtils.sleep(1);
         }
-
-        if (!isActive()) {
-            HSLogger.warn(`Timeout: Failed to enter challenge ${challengeIndex}`, this.context);
-            return;
-        }
-
-        this.coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
 
         const startTime = performance.now();
         const endTime = startTime + maxTime;
@@ -1250,39 +1214,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }, initialDelayMs);
     }
 
-    private antiBuyCoinBugViaExpose(initialDelayMs = 0, intervalMs = 10, stableMs = 200): void {
-        window.setTimeout(() => {
-            let attempt = 0;
-            let stableAt: number | null = null; // timestamp when upgrades[81] first became 1
-
-            const intervalId = window.setInterval(() => {
-                attempt++;
-
-                //const result = (window as any).__HS_GAME_API?.ensureWorkerAutobuyer?.();
-                const result = (window as any).__HS_GAME_API?.checkWorkerAutobuyer?.();
-                const snapAttempt = this.getGameDataSnapshot();
-                const upg81 = snapAttempt?.upgrades?.['81'] ?? 'N/A';
-
-                if (upg81 === 1) {
-                    if (stableAt === null) stableAt = Date.now();
-                    const stableForMs = Date.now() - stableAt;
-                    if (stableForMs >= stableMs) {
-                        window.clearInterval(intervalId);
-                    }
-                } else {
-                    stableAt = null; // reset if it flipped back to 0
-                }
-            }, intervalMs);
-        }, initialDelayMs);
-    }
-
     // ============================================================================
     // AMBROSIA LOADOUT
     // ============================================================================
 
     private async setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
+        loadout.click();
         while (!this.isInAmbLoadout(loadout)) {
-            loadout.click();
             if (this.isInAmbLoadout(loadout)) {
                 return;
             }
@@ -1409,7 +1347,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
 
-
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),
             this.getCurrentGoldenQuarks(),
@@ -1427,7 +1364,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         HSLogger.debug("Singularity performed", this.context);
 
         let stage = stageInitial;
+        let i = 0;
         while (!this.isAllowedStage(stage)) {
+            i++;
             await HSUtils.sleep(1);
             stage = await this.getStage();
         }
@@ -1440,13 +1379,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async enterAndLeaveExalt(): Promise<void> {
+
+        await HSUtils.click(this.exalt2Btn);
         while (!this.isInExalt()) {
-            await HSUtils.click(this.exalt2Btn);
             await HSUtils.sleep(this.sleepTime);
         }
 
+        await HSUtils.click(this.exalt2Btn);
         while (this.isInExalt()) {
-            await HSUtils.click(this.exalt2Btn);
             await HSUtils.sleep(this.sleepTime);
         }
     }
@@ -1461,12 +1401,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private getCurrentQuarks(): Promise<number> {
-        const data = this.getGameDataSnapshot();
+        const data = this.gameDataAPI?.getGameData();
         return Promise.resolve(data?.worlds ?? 0);
     }
 
     private getCurrentGoldenQuarks(): Promise<number> {
-        const data = this.getGameDataSnapshot();
+        const data = this.gameDataAPI?.getGameData();
         return Promise.resolve(data?.goldenQuarks ?? 0);
     }
 
