@@ -147,6 +147,11 @@ export abstract class HSSetting<T extends HSSettingType> {
 
         this.definition.enabled = newState;
 
+        if (this.definition.settingType === 'boolean') {
+            (this.definition as HSSettingBase<boolean>).settingValue = newState;
+            (this.definition as HSSettingBase<boolean>).calculatedSettingValue = newState;
+        }
+
         // Use getElementById for safer and faster lookup
         // Check if controlEnabledId is defined before trying to find it
         if (this.definition.settingControl?.controlEnabledId) {

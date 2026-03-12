@@ -23,6 +23,9 @@ export class HSLogger {
 
     static #lastLogHash = -1;
     static #displayTimestamp: boolean = false;
+    static #debugEnabledCache = false;
+    static #debugEnabledCacheAt = 0;
+    static #debugEnabledCacheMs = 250;
 
     static #oneShotLogHistory: Map<string, { logged: boolean, timestamp: number, level: ELogType, count: number }> = new Map();
     static #oneShotLogHistoryIvl?: number;
@@ -77,7 +80,7 @@ export class HSLogger {
                     break;
             }
 
-            // We add hs-log-ts-hidden to the timestamp span if the setting to show log timestamps is enabled
+            // We add hs-log-ts-hidden to the timestamp span if the setting to show log timestamps is disabled
             const hiddenTS = this.#displayTimestamp ? "" : "hs-log-ts-hidden";
             const moduleFromContext = HSModuleManager.getModule(context);
 

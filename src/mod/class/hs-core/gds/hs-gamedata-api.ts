@@ -104,6 +104,21 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         REDAMB_regularLuck: { value: undefined, cachedBy: [] },
         REDAMB_regularLuck2: { value: undefined, cachedBy: [] },
         REDAMB_viscount: { value: undefined, cachedBy: [] },
+        REDAMB_tutorial: { value: undefined, cachedBy: [] },
+        REDAMB_conversionImprovement1: { value: undefined, cachedBy: [] },
+        REDAMB_conversionImprovement2: { value: undefined, cachedBy: [] },
+        REDAMB_conversionImprovement3: { value: undefined, cachedBy: [] },
+        REDAMB_freeTutorialLevels: { value: undefined, cachedBy: [] },
+        REDAMB_redGenerationSpeed: { value: undefined, cachedBy: [] },
+        REDAMB_redLuck: { value: undefined, cachedBy: [] },
+        REDAMB_redAmbrosiaCube: { value: undefined, cachedBy: [] },
+        REDAMB_redAmbrosiaObtainium: { value: undefined, cachedBy: [] },
+        REDAMB_redAmbrosiaOffering: { value: undefined, cachedBy: [] },
+        REDAMB_redAmbrosiaCubeImprover: { value: undefined, cachedBy: [] },
+        REDAMB_infiniteShopUpgrades: { value: undefined, cachedBy: [] },
+        REDAMB_redAmbrosiaAccelerator: { value: undefined, cachedBy: [] },
+        REDAMB_salvageYinYang: { value: undefined, cachedBy: [] },
+        REDAMB_blueberries: { value: undefined, cachedBy: [] },
 
         R_CampaignAmbrosiaSpeedBonus: { value: undefined, cachedBy: [] },
         R_CampaignRune6Bonus: { value: undefined, cachedBy: [] },
@@ -6208,11 +6223,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const RED_AMB_GEN_1 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed;
         const RED_AMB_GEN_2 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed;
+        const AMBROSIA_UNLOCKED_GATE = gameData.singularityChallenges.noSingularityUpgrades.completions > 0 ? 1 : 0;
 
         const cube76 = gameData.cubeUpgrades[76] ?? 1;
 
         const vals = [
-            +(gameData.visitedAmbrosiaSubtab),
+            AMBROSIA_UNLOCKED_GATE,
             P_GEN_BUFF,
             campaignBlueberrySpeedBonus,
             (this.R_calculateAmbrosiaGenerationShopUpgrade() as number),

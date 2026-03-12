@@ -29,8 +29,9 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.10.6a-dev9',
+        currentModVersion: '2.11-pre-release-dev17',
         isLatestVersion: true,
+        isModFullyLoaded: false,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
         modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',
@@ -293,6 +294,10 @@ export const HSGlobal: IHSGlobal = class {
                 url: 'https://synergism.cc/Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png',
                 draggableIconId: AMBROSIA_ICON.RA_REGLUCK
             }],
+            [AMBROSIA_ICON.RA_BLUEBERRIES, {
+                url: 'https://synergism.cc/Pictures/RedAmbrosia/RedAmbrosiaBlueberries.png',
+                draggableIconId: AMBROSIA_ICON.RA_BLUEBERRIES
+            }],
 
             // QUARKS, CUBES, LUCK 1
             [AMBROSIA_ICON.QUARKS1, {
@@ -320,6 +325,10 @@ export const HSGlobal: IHSGlobal = class {
             [AMBROSIA_ICON.SING_RED1, {
                 url: 'https://synergism.cc/Pictures/Default/BlueberrySingReduction.png',
                 draggableIconId: AMBROSIA_ICON.SING_RED1
+            }],
+            [AMBROSIA_ICON.TALISMAN, {
+                url: 'https://synergism.cc/Pictures/Default/BlueberryTalismanBonusRuneLevel.png',
+                draggableIconId: AMBROSIA_ICON.TALISMAN
             }],
 
             // Second Red Ambrosia set
@@ -383,6 +392,10 @@ export const HSGlobal: IHSGlobal = class {
                 url: 'https://synergism.cc/Pictures/RedAmbrosia/RedAmbrosiaRedLuck.png',
                 draggableIconId: AMBROSIA_ICON.RA_REDLUCK
             }],
+            [AMBROSIA_ICON.RA_YIN_YANG, {
+                url: 'https://synergism.cc/Pictures/RedAmbrosia/RedAmbrosiaSalvageYinYang.png',
+                draggableIconId: AMBROSIA_ICON.RA_YIN_YANG
+            }],
 
             // QUARKS, CUBES, LUCK 2
             [AMBROSIA_ICON.QUARKS2, {
@@ -410,6 +423,10 @@ export const HSGlobal: IHSGlobal = class {
             [AMBROSIA_ICON.INF_SHOP1, {
                 url: 'https://synergism.cc/Pictures/Default/BlueberryInfiniteShopUpgrades.png',
                 draggableIconId: AMBROSIA_ICON.INF_SHOP1
+            }],
+            [AMBROSIA_ICON.ALPHA, {
+                url: 'https://synergism.cc/Pictures/Default/BlueberryRuneOOMBonus.png',
+                draggableIconId: AMBROSIA_ICON.ALPHA
             }],
 
             // Fourth Red Ambrosia set
@@ -452,6 +469,10 @@ export const HSGlobal: IHSGlobal = class {
             [AMBROSIA_ICON.INF_SHOP2, {
                 url: 'https://synergism.cc/Pictures/Default/BlueberryInfiniteShopUpgrades2.png',
                 draggableIconId: AMBROSIA_ICON.INF_SHOP2
+            }],
+            [AMBROSIA_ICON.LUCK4, {
+                url: 'https://synergism.cc/Pictures/Default/BlueberryLuck4.png',
+                draggableIconId: AMBROSIA_ICON.LUCK4
             }],
 
             // Fifth Red Ambrosia set

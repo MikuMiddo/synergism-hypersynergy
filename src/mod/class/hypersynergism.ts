@@ -46,6 +46,7 @@ export class Hypersynergism {
     async init() {
         if (this.#isInitialized) return;
         this.#isInitialized = true;
+        HSGlobal.General.isModFullyLoaded = false;
 
         // Wait for game to be ready before doing ANYTHING substantial
         if (!await this.#waitForGameReady()) {
@@ -67,6 +68,10 @@ export class Hypersynergism {
         // Do this after UI Panel stuff is ready, because
         // syncing basically means syncing the UI with the settings
         await HSSettings.syncSettings();
+        // Mod fully loaded, so we show HS icon, and update the flag
+        const hsui = HSModuleManager.getModule<HSUI>('HSUI');
+        hsui?.setPanelControlVisible(true);
+        HSGlobal.General.isModFullyLoaded = true;
 
         await HSUI.Notify(`Hypersynergism v${HSGlobal.General.currentModVersion} loaded`, {
             position: 'top',
@@ -184,6 +189,7 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: 'Dump Game vars' }),
                     HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: 'CLEAR SETTINGS', styles: { borderColor: 'red' } }),
                     HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
+                    HSUIC.Button({ id: 'hs-panel-exit-exalt-bug-btn', text: 'Fix Exalt Bug' }),
                     HSUIC.Div({
                         html: 'Testing tools',
                         styles: {
@@ -332,6 +338,21 @@ export class Hypersynergism {
                     position: 'top',
                     notificationType: "warning"
                 });
+            }
+        });
+
+        document.querySelector('#hs-panel-exit-exalt-bug-btn')?.addEventListener('click', () => {
+            console.log('Attempting to exit an exalt by clicking the active challenge (if any).');
+            
+            const singChallengesWrapper = document.querySelector('#singularityChallenges');
+            if (!singChallengesWrapper) return;
+            
+            const img = singChallengesWrapper.querySelector('img.challenge[style*="background-color: orchid"]') as HTMLElement;
+            if (img) {
+                console.log('Found active challenge img, clicking:', img);
+                img.click();
+            } else {
+                console.log('Could not find an active Singularity challenge in the DOM.');
             }
         });
 

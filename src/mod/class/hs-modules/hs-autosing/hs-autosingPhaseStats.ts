@@ -104,17 +104,19 @@ export function updatePhaseRowDom(
     dom: PhaseRowDom,
     stats: { phaseCount?: number; phaseName: string; innerLoopCount: number; avg: number; sd: number; last: number }
 ) {
-    // Phase count: value with 0 decimal, prefix 'x'
-    dom.phaseCountSpan.textContent = `x${stats.phaseCount} `;
-    dom.nameTextSpan.textContent = stats.phaseName;
-    // Inner loops: always show 2 decimals, prefix 'x'
-    dom.innerLoopsCell.textContent = 'x' + stats.innerLoopCount.toFixed(2);
-    // Avg: value with 2 decimals, suffix 's'
-    dom.avgCell.textContent = stats.avg.toFixed(2) + 's';
-    // SD: prefix with ± (U+00B1), 2 decimals
-    dom.sdCell.textContent = '\u00B1' + stats.sd.toFixed(2);
-    // Last: value with 2 decimals, suffix 's'
-    dom.lastCell.textContent = stats.last.toFixed(2) + 's';
+    // Pre-format all values, then only touch DOM if changed
+    const countText = `x${stats.phaseCount} `;
+    const loopsText = 'x' + stats.innerLoopCount.toFixed(2);
+    const avgText = stats.avg.toFixed(2) + 's';
+    const sdText = '\u00B1' + stats.sd.toFixed(2);
+    const lastText = stats.last.toFixed(2) + 's';
+
+    if (dom.phaseCountSpan.textContent !== countText) dom.phaseCountSpan.textContent = countText;
+    if (dom.nameTextSpan.textContent !== stats.phaseName) dom.nameTextSpan.textContent = stats.phaseName;
+    if (dom.innerLoopsCell.textContent !== loopsText) dom.innerLoopsCell.textContent = loopsText;
+    if (dom.avgCell.textContent !== avgText) dom.avgCell.textContent = avgText;
+    if (dom.sdCell.textContent !== sdText) dom.sdCell.textContent = sdText;
+    if (dom.lastCell.textContent !== lastText) dom.lastCell.textContent = lastText;
 }
 
 /**

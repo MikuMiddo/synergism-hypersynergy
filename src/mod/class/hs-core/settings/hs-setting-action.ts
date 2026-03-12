@@ -149,7 +149,7 @@ export class HSSettingActions {
                 }
             }
         },
-                
+
         ambrosiaIdleSwapAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
@@ -169,31 +169,26 @@ export class HSSettingActions {
                     await ambrosiaMod.enableIdleSwap();
                     newState = true;
                 }
-                // Update quick access button
-                const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]');
-                if (quickMenuBtn) {
-                    const stateHtml = newState
-                        ? '<span style="color: #4caf50; font-weight: bold;">ON</span>'
-                        : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
-                    quickMenuBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [${stateHtml}]`;
-                }
 
-                HSUI.Notify(`Ambrosia AFK Swapper toggled ${newState ? 'ON' : 'OFF'}.`, {
-                    position: 'top',
-                    notificationType: 'default'
-                });
             }
         },
 
         startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
+            if (!params.disable && !HSGlobal.General.isModFullyLoaded) {
+                HSLogger.log("Hypersynergism is still loading. Please wait before starting Auto-Sing.", context);
+                HSSettings.getSetting('startAutosing')?.disable();
+                return;
+            }
+
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
                 if (params.disable && params.disable === true) {
-                    await autosingMod.disableAutoSing();
+                    // Review mode: we stop autosing process but keep the modal visible
+                    autosingMod.stopAutosing({ showReviewModal: true });
                 } else {
-                    // Auto-enable GDS if not already enabled
+                    // Auto-enable GDS if not already enabled, and start autosing
                     const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
                     if (!gdsSettingEnabled) {
                         HSSettings.getSetting('useGameData')?.enable();
@@ -222,9 +217,9 @@ export class HSSettingActions {
             await HSSettings.exportSelectedStrategy();
         },
 
-        migrateIdsAndExportAutosingStrategy: async (params: HSSettingActionParams) => {
+        migrateAndSaveAllUserStrategies: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.exportSelectedStrategy(true);
+            await HSSettings.migrateAndSaveAllUserStrategies();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
@@ -265,30 +260,15 @@ export class HSSettingActions {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (!qolButtonsMod) return;
 
-            // Remove or inject the quickbar section based on setting
-            const quickbarSectionId = 'automation';
-            // Fallback to import if not on window
-            const HSQuickbarManagerImport = HSQuickbarManager.getInstance();
-
-            // Use explicit module teardown/setup wrappers so watcher and RAF lifecycle stays correct
-            // when this setting is toggled multiple times.
             if (params.disable && params.disable === true) {
-                qolButtonsMod.teardownAutomationQuickbarWrapper();
-                HSQuickbarManagerImport.removeSection(quickbarSectionId);
+                qolButtonsMod.disableAutomationQuickbar();
             } else {
-                HSQuickbarManagerImport.registerSection(quickbarSectionId, () => qolButtonsMod.getAutomationQuickbarSection());
-                HSQuickbarManagerImport.injectSection(quickbarSectionId);
-                // Ensure quickbar is populated after injection
-                HSQuickbarManagerImport.whenSectionInjected(quickbarSectionId).then(() => {
-                    const section = HSQuickbarManagerImport.getSection(quickbarSectionId) as HTMLDivElement;
-                    if (section) {
-                        qolButtonsMod.automationQuickBarContainer = section;
-                        qolButtonsMod.setupAutomationQuickbarWrapper();
-                    } else {
-                        HSLogger.warn(`Quickbar section '${quickbarSectionId}' not found during automation quickbar setup.`, context);
-                    }
-                });
+                qolButtonsMod.enableAutomationQuickbar();
             }
+        },
+
+        eventQuickBarAction: async (params: HSSettingActionParams) => {
+            /* to  do */
         }
     }
 

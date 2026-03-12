@@ -151,17 +151,15 @@ export class HSSettings extends HSModule {
                             HSSettings.#settingDisabledString
                         );
                         break;
+                    case 'button':
+                        (HSSettings.#settings as any)[key] = new HSButtonSetting(
+                            setting as unknown as HSSettingBase<null>,
+                            settingAction,
+                            HSSettings.#settingEnabledString,
+                            HSSettings.#settingDisabledString
+                        );
+                        break;
                     default:
-                        // Fallback for types not in HSSettingJSONType (e.g., button)
-                        if ((setting as any).settingType === 'button') {
-                            (HSSettings.#settings as any)[key] = new HSButtonSetting(
-                                setting as unknown as HSSettingBase<null>,
-                                settingAction,
-                                HSSettings.#settingEnabledString,
-                                HSSettings.#settingDisabledString
-                            );
-                            break;
-                        }
                         throw new Error(`Could not parse setting ${key.toString()} (settingType: ${setting.settingType}, settingValue: ${setting.settingValue})`);
                 }
             }
@@ -911,6 +909,17 @@ export class HSSettings extends HSModule {
 
         let normalizedStrategy = HSSettings.ensureAoagPhase(strategy);
         normalizedStrategy = HSSettings.ensureCorruptionLoadouts(normalizedStrategy);
+
+        // Always persist strategies with OLD special action IDs so they remain
+        // usable by other mod versions or by players without this mod.
+        const beforeNormalize = JSON.stringify(normalizedStrategy);
+        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toOld');
+        if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" back to old special action IDs`, HSSettings.#staticContext);
+        } else {
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses old special action IDs — no change needed`, HSSettings.#staticContext);
+        }
+
         this.validateStrategy(normalizedStrategy);
         const isUpdate = !!strategyName;
         const nameExists = strategies.some(s => {
@@ -954,8 +963,7 @@ export class HSSettings extends HSModule {
 
         HSSettings.updateStrategyDropdownList();
         HSSettings.selectAutosingStrategyByName(normalizedStrategy.strategyName);
-        HSLogger.log(`[HSAutosing] Strategy "${normalizedStrategy}" "${isUpdate ? "updated" : "saved"}."`, 'HSAutosingStrategyModal');
-
+        HSLogger.log(`[HSAutosing] Strategy "${normalizedStrategy.strategyName}" "${isUpdate ? "updated" : "saved"}."`, 'HSAutosingStrategyModal');
     }
 
     /**
@@ -1013,7 +1021,7 @@ export class HSSettings extends HSModule {
         HSUI.Notify(`Strategy "${strategyName}" deleted. Defaulted to ${firstDefault ? '"' + firstDefault + '"' : 'none'}.`, { notificationType: "success" });
     }
 
-    static async exportSelectedStrategy(migrateSpecialActionIds: boolean = false) {
+    static async exportSelectedStrategy() {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
         if (!selectedValue || selectedValue === '') {
@@ -1031,7 +1039,7 @@ export class HSSettings extends HSModule {
             return;
         }
         const strategyName = selectedOption.value.toString();
-        
+
         // First try to find the strategy in memory (including defaults),
         // then try loading from storage if it's a default strategy that isn't in memory yet
         let strategy = HSSettings.getStrategies().find(s => s.strategyName === strategyName);
@@ -1042,17 +1050,10 @@ export class HSSettings extends HSModule {
             HSUI.Notify("Strategy not found - cannot export", { notificationType: "error" });
             return;
         }
-        if (migrateSpecialActionIds) {
-            strategy = HSSettings.migrateStrategyActionIdsAuto(strategy);
-        }
         try {
             const strategyJson = JSON.stringify(strategy, null, 2);
             await navigator.clipboard.writeText(strategyJson);
-            if (migrateSpecialActionIds) {
-                HSUI.Notify(`Strategy "${strategyName}" converted (old <=> new SA IDs) and copied to clipboard.`, { notificationType: "default" });
-            } else {
-                HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, { notificationType: "success" });
-            }
+            HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, { notificationType: "success" });
         } catch {
             HSUI.Notify("Failed to copy strategy to clipboard", { notificationType: "error" });
         }
@@ -1073,7 +1074,7 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static async importStrategy(migrateSpecialActionIds: boolean = false){
+    static async importStrategy() {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (uiMod) {
             const modalId = await uiMod.Modal({
@@ -1166,12 +1167,6 @@ export class HSSettings extends HSModule {
                     return;
                 }
 
-                // Apply conversion if requested
-                if (migrateSpecialActionIds) {
-                    parsedStrategy = HSSettings.migrateStrategyActionIdsAuto(parsedStrategy);
-                    HSUI.Notify("Converted old action IDs to new format", { notificationType: "default" });
-                }
-
                 this.validateStrategy(parsedStrategy);
 
                 // Update the strategy name to the user's input
@@ -1224,8 +1219,16 @@ export class HSSettings extends HSModule {
         const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
         if (!selectedOption) return;
 
+        const selectedStrategyName = selectedOption.value.toString();
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const isDefaultStrategy = defaultNames.includes(selectedStrategyName);
+
         const strategies = HSSettings.getStrategies();
-        const strategy = strategies.find(s => s.strategyName === selectedOption.value.toString());
+        let strategy = strategies.find(s => s.strategyName === selectedStrategyName);
+
+        if (!strategy && isDefaultStrategy) {
+            strategy = await HSSettings.loadDefaultStrategyByName(selectedStrategyName) || undefined;
+        }
 
         if (!strategy) {
             HSUI.Notify("Strategy not found - Cannot edit", {
@@ -1233,15 +1236,15 @@ export class HSSettings extends HSModule {
             });
             return;
         }
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        if (defaultNames.includes(strategy.strategyName)) {
-            HSUI.Notify("Cannot edit default strategy", {
-                notificationType: "warning"
-            });
-            return;
-        }
 
-        await HSAutosingStrategyModal.open(strategy, selectedValue as number);
+        if (isDefaultStrategy) {
+            await HSAutosingStrategyModal.open(strategy, {
+                duplicateFromDefault: true,
+                suggestedName: `${strategy.strategyName}_copy`
+            });
+        } else {
+            await HSAutosingStrategyModal.open(strategy);
+        }
     }
 
     static saveSettingsToStorage() {
@@ -1350,43 +1353,210 @@ export class HSSettings extends HSModule {
 
         if (loaded) {
             const list = Array.isArray(loaded) ? loaded : [loaded];
+            const defaultStrategyNames = new Set(HSSettings.getDefaultStrategyNames());
+            const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
+            const didDropDefaults = userStrategies.length !== list.length;
 
-            // Migrate old action IDs to new ones for all user strategies
-            let didMigrate = false;
-            for (const strategy of list) {
+            // Normalize all user strategies to OLD special action IDs so that
+            // localStorage is always mod-version-agnostic (usable without this mod).
+            // Any strategies that were previously saved with new IDs get converted back.
+            let didNormalize = false;
+            for (const strategy of userStrategies) {
                 const before = JSON.stringify(strategy);
-                HSSettings.migrateStrategyActionIdsAuto(strategy, true);
+                HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
                 if (before !== JSON.stringify(strategy)) {
-                    didMigrate = true;
+                    didNormalize = true;
                 }
             }
-            // And save them back to storage if any migration was done
-            if (didMigrate) {
-                storageMod.setData(HSGlobal.HSSettings.strategiesKey, list);
+
+            // Save back if defaults were dropped or any ID normalization occurred
+            if (didDropDefaults || didNormalize) {
+                storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
             }
 
-            return list.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+            return userStrategies.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
         }
 
         return null;
     }
 
-    // Migrates old action IDs to new ones or vice versa
-    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, oldToNewOnly: boolean = false): HSAutosingStrategy {
+    static async migrateAndSaveAllUserStrategies() {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+        if (!storageMod) {
+            HSUI.Notify("Could not find Storage Module", { notificationType: "error" });
+            return;
+        }
+
+        const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
+        const list = loaded ? (Array.isArray(loaded) ? loaded : [loaded]) : [];
+
+        const defaultNames = new Set(HSSettings.getDefaultStrategyNames());
+        const userStrategies = list.filter(strategy => !defaultNames.has(strategy.strategyName));
+        const droppedDefaults = list.length - userStrategies.length;
+
+        const invalidStrategies: string[] = [];
+        for (const strategy of userStrategies) {
+            const state = HSSettings.#resolveStrategyActionIdState(strategy);
+            if (state.state === 'invalid') {
+                invalidStrategies.push(`${strategy.strategyName} (${state.reason})`);
+            }
+        }
+
+        if (invalidStrategies.length > 0) {
+            const firstFew = invalidStrategies.slice(0, 3).join(', ');
+            const more = invalidStrategies.length > 3 ? ` (+${invalidStrategies.length - 3} more)` : '';
+
+            HSUI.Notify(
+                `Migrate&Save aborted: some strategies are not strictly old/new ID state. Fix and retry. ${firstFew}${more}`,
+                { notificationType: "error" }
+            );
+
+            HSLogger.warn(
+                `[HSSettings] Migrate&Save aborted due to invalid strategy ID states: ${invalidStrategies.join(', ')}`,
+                HSSettings.#staticContext
+            );
+            return;
+        }
+
+        let migratedStrategies = 0;
+        for (const strategy of userStrategies) {
+            const before = JSON.stringify(strategy);
+            HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
+            if (before !== JSON.stringify(strategy)) {
+                migratedStrategies++;
+            }
+        }
+
+        const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
+
+        if (!saved) {
+            HSUI.Notify("Failed to save migrated strategies to localStorage", { notificationType: "error" });
+            HSLogger.warn(
+                `[HSSettings] Migrate&Save failed: could not persist ${userStrategies.length} user strategies`,
+                HSSettings.#staticContext
+            );
+            return;
+        }
+
+        HSSettings.#strategies = userStrategies.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+        HSSettings.updateStrategyDropdownList();
+
+        HSUI.Notify(
+            `Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies}, dropped ${droppedDefaults} defaults from localStorage.`,
+            { notificationType: "success" }
+        );
+
+        HSLogger.log(
+            `[HSSettings] Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies}, droppedDefaults=${droppedDefaults})`,
+            HSSettings.#staticContext
+        );
+    }
+
+    static #resolveStrategyActionIdState(strategy: HSAutosingStrategy): {
+        state: 'old' | 'new' | 'none' | 'invalid';
+        reason: 'old-only' | 'new-only' | 'none' | 'mixed' | 'shared-only' | 'unknown-only' | 'shared-and-unknown-only';
+        oldOnlyCount: number;
+        newOnlyCount: number;
+        sharedCount: number;
+        unknownCount: number;
+    } {
         const oldToNewActionIds: Record<number, number> = {
-            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402, 
-            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212, 
-            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605, 
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902
+            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
+            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
+            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
+            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
+            200: 200, 202: 202,
+            // New-only IDs added after migration era — no old equivalent
+            154: 154, 155: 155,
+            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
+            903: 903
+        };
+
+        const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
+        const newIdSet = new Set<number>(Object.values(oldToNewActionIds));
+
+        const allIds: number[] = [];
+        const collectIds = (challenge: any) => {
+            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
+        };
+        strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
+        strategy.aoagPhase?.strat?.forEach(collectIds);
+
+        let oldOnlyCount = 0;
+        let newOnlyCount = 0;
+        let sharedCount = 0;
+        let unknownCount = 0;
+
+        for (const id of allIds) {
+            const isOld = oldIdSet.has(id);
+            const isNew = newIdSet.has(id);
+
+            if (isOld && isNew) {
+                sharedCount++;
+            } else if (isOld) {
+                oldOnlyCount++;
+            } else if (isNew) {
+                newOnlyCount++;
+            } else {
+                unknownCount++;
+            }
+        }
+
+        const hasOldOnly = oldOnlyCount > 0;
+        const hasNewOnly = newOnlyCount > 0;
+
+        if (hasOldOnly && !hasNewOnly) {
+            return { state: 'old', reason: 'old-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        if (hasNewOnly && !hasOldOnly) {
+            return { state: 'new', reason: 'new-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        if (allIds.length === 0) {
+            return { state: 'none', reason: 'none', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        if (hasOldOnly && hasNewOnly) {
+            return { state: 'invalid', reason: 'mixed', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        if (sharedCount > 0 && unknownCount === 0) {
+            return { state: 'invalid', reason: 'shared-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        if (sharedCount === 0 && unknownCount > 0) {
+            return { state: 'invalid', reason: 'unknown-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+        }
+
+        return { state: 'invalid', reason: 'shared-and-unknown-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
+    }
+
+    // Migrates strategy special action IDs either entirely to new IDs ('toNew') or entirely to old IDs ('toOld').
+    // Skips without mutating if the strategy is already in the target state.
+    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld'): HSAutosingStrategy {
+        const oldToNewActionIds: Record<number, number> = {
+            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
+            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
+            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
+            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
+            // New-only IDs added after migration era — no old equivalent, pass through unchanged
+            154: 154, 155: 155, 200: 200, 202: 202,
+            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
+            903: 903
         };
         const newToOldActionIds = Object.fromEntries(
             Object.entries(oldToNewActionIds).map(([oldId, newId]) => [newId, Number(oldId)])
         );
+        const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
+        const newIdSet = new Set<number>(Object.values(oldToNewActionIds));
+        const oldOnlyIdSet = new Set<number>([...oldIdSet].filter(id => !newIdSet.has(id)));
+        const newOnlyIdSet = new Set<number>([...newIdSet].filter(id => !oldIdSet.has(id)));
 
-        // Gather all challengeNumbers in the strategy
+        // Gather all special action challengeNumbers (>= 100) in the strategy
         const allIds: number[] = [];
         const collectIds = (challenge: any) => {
-            if (challenge.challengeNumber) allIds.push(challenge.challengeNumber);
+            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
         };
         strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
         strategy.aoagPhase?.strat?.forEach(collectIds);
@@ -1398,25 +1568,138 @@ export class HSSettings extends HSModule {
             if (newToOldActionIds[id]) newCount++;
         }
 
-        // Decide direction
-        let map: Record<number, number> | null = null;
-        if (oldCount > newCount) {
-            map = oldToNewActionIds;
-        } else if (oldToNewOnly){
-            HSLogger.debug(`Strategy "${strategy.strategyName}" is already using the new SA IDs.`, 'HSSettings');
-            return strategy;
-        } else {
-            map = newToOldActionIds;
+        let oldOnlyCount = 0;
+        let newOnlyCount = 0;
+        let sharedCount = 0;
+        let unknownCount = 0;
+        const unknownIds: number[] = [];
+
+        for (const id of allIds) {
+            const isOld = oldIdSet.has(id);
+            const isNew = newIdSet.has(id);
+
+            if (isOld && isNew) {
+                sharedCount++;
+            } else if (isOld) {
+                oldOnlyCount++;
+            } else if (isNew) {
+                newOnlyCount++;
+            } else {
+                unknownCount++;
+                unknownIds.push(id);
+            }
         }
-        
+
+        const hasOldOnly = oldOnlyCount > 0;
+        const hasNewOnly = newOnlyCount > 0;
+        const allMatchOldState = hasOldOnly && !hasNewOnly;
+        const allMatchNewState = hasNewOnly && !hasOldOnly;
+        const allShared = !hasOldOnly && !hasNewOnly && sharedCount > 0;
+        const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
+
+        if (allMatchOldState) {
+            HSLogger.debug(
+                `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
+                'HSSettings'
+            );
+        } else if (allMatchNewState) {
+            HSLogger.debug(
+                `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
+                'HSSettings'
+            );
+        } else if (allShared) {
+            HSLogger.debug(
+                `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
+                'HSSettings'
+            );
+        } else {
+            HSLogger.warn(
+                `Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
+                'HSSettings'
+            );
+        }
+
+        HSLogger.debug(
+            `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`,
+            'HSSettings'
+        );
+
+        // Decide direction based on explicit target — caller always knows which state they want.
+        let map: Record<number, number> | null = null;
+        let direction: 'old->new' | 'new->old' | 'none' = 'none';
+
+        if (target === 'toNew') {
+            if (hasNewOnly && !hasOldOnly) {
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, 'HSSettings');
+                return strategy;
+            } else if (hasOldOnly && !hasNewOnly) {
+                map = oldToNewActionIds;
+                direction = 'old->new';
+            }
+        } else { // target === 'toOld'
+            if (hasOldOnly && !hasNewOnly) {
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, 'HSSettings');
+                return strategy;
+            } else if (hasNewOnly && !hasOldOnly) {
+                map = newToOldActionIds;
+                direction = 'new->old';
+            }
+        }
+
+        if (!map) {
+            if (hasOldOnly && hasNewOnly) {
+                HSLogger.warn(
+                    `Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`,
+                    'HSSettings'
+                );
+            } else {
+                let reason = 'no-exclusive-ids';
+                if (sharedCount > 0 && unknownCount === 0) {
+                    reason = 'shared-only';
+                } else if (sharedCount === 0 && unknownCount > 0) {
+                    reason = 'unknown-only';
+                } else if (sharedCount > 0 && unknownCount > 0) {
+                    reason = 'shared-and-unknown-only';
+                }
+
+                HSLogger.debug(
+                    `Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`,
+                    'HSSettings'
+                );
+            }
+            return strategy;
+        }
+
+        HSLogger.debug(
+            `Strategy "${strategy.strategyName}": selected migration direction=${direction}`,
+            'HSSettings'
+        );
+
         // Migrate
+        let migratedCount = 0;
         const migrateChallenge = (challenge: any) => {
-            if (challenge.challengeNumber && map![challenge.challengeNumber]) {
+            const challengeId = challenge.challengeNumber;
+
+            if (!challengeId) {
+                return;
+            }
+
+            const isMigrateCandidate =
+                (direction === 'old->new' && oldOnlyIdSet.has(challengeId)) ||
+                (direction === 'new->old' && newOnlyIdSet.has(challengeId));
+
+            if (isMigrateCandidate && map![challengeId]) {
                 challenge.challengeNumber = map![challenge.challengeNumber];
+                migratedCount++;
             }
         };
         strategy.strategy?.forEach(phase => phase.strat?.forEach(migrateChallenge));
         strategy.aoagPhase?.strat?.forEach(migrateChallenge);
+
+        HSLogger.debug(
+            `Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`,
+            'HSSettings'
+        );
 
         return strategy;
     }

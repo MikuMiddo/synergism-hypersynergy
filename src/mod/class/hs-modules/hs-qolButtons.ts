@@ -1485,4 +1485,25 @@ export class HSQOLButtons extends HSModule {
         this.#teardownAutomationQuickbar();
     }
 
+    /**
+     * Public method to enable the automation quickbar using HSQuickbarManager.
+     * This delegates registration/injection to HSQuickbarManager and ensures
+     * the module's setup runs once the section is injected.
+     */
+    public enableAutomationQuickbar(): void {
+        HSQuickbarManager.getInstance().enableAutomationQuickbar(() => this.getAutomationQuickbarSection(), (section) => {
+            this.automationQuickBarContainer = section as HTMLDivElement;
+            this.setupAutomationQuickbarWrapper();
+        });
+    }
+
+    /**
+     * Public method to disable the automation quickbar using HSQuickbarManager.
+     * This triggers module teardown and removes the section from the manager.
+     */
+    public disableAutomationQuickbar(): void {
+        this.teardownAutomationQuickbarWrapper();
+        HSQuickbarManager.getInstance().disableAutomationQuickbar();
+    }
+
 }

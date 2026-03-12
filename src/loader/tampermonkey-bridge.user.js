@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      1.0
+// @version      1.1
 // @description  Evergreen bridge to official Hypersynergism mod
 // @author       Ferlieloi
 // @match        https://synergism.cc/*

@@ -5,7 +5,7 @@
 import { decompressFromUTF16 } from 'lz-string';
 import type { HSAutosingDB } from './hs-autosingDB';
 
-interface SingularityBundle {
+export interface SingularityBundle {
     singularityNumber: number;
     totalTime: number;
     quarksGained: number;

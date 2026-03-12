@@ -170,7 +170,7 @@
   },
   "autoLoadout": {
     "settingName": "autoLoadout",
-    "settingDescription": "Auto loadout",
+    "settingDescription": "Add+Time Amb loadouts auto-switch",
     "settingHelpText": "When enabled, the mod will automatically switch to configured ambrosia loadouts when ADD or TIME buttons are clicked.",
     "settingType": "boolean",
     "enabled": false,
@@ -671,14 +671,14 @@
       "controlPage": "auto-sing"
     }
   },
-  "migrateIdsAndExportAutosingStrategy": {
-    "settingName": "migrateIdsAndExportAutosingStrategy",
-    "settingDescription": "Migrate&Export",
-    "settingHelpText": "Migrates the special action IDs of the selected strategy",
+  "migrateAndSaveAllUserStrategies": {
+    "settingName": "migrateAndSaveAllUserStrategies",
+    "settingDescription": "Migrate&SaveAll",
+    "settingHelpText": "Migrates all non-default local strategies (old<=>new IDs) and saves them to localStorage",
     "settingType": "button",
     "enabled": true,
     "settingValue": "",
-    "settingAction": "migrateIdsAndExportAutosingStrategy",
+    "settingAction": "migrateAndSaveAllUserStrategies",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy-migrator-button",
       "controlType": "button",
@@ -1245,6 +1245,20 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
+    }
+  },
+  "eventQuickBar": {
+    "settingName": "eventQuickBar",
+    "settingDescription": "Event quick bar",
+    "settingHelpText": "When enabled, shows a bell icon in the header during events.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "eventQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-event-quickbar-btn"
     }
   },
   "hideMaxedGQUpgrades": {

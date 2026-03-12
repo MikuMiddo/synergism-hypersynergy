@@ -34,6 +34,7 @@ export enum AMBROSIA_ICON {
     RA_CONV1 = 'redAmbrosiaConversionImprovement1',
     RA_BLUEGEN = 'redAmbrosiaBlueberryGenerationSpeed',
     RA_REGLUCK = 'redAmbrosiaRegularLuck',
+    RA_BLUEBERRIES = 'redAmbrosiaBlueberries',
 
     QUARKS1 = 'ambrosiaQuarks1',
     CUBES1 = 'ambrosiaCubes1',
@@ -42,6 +43,7 @@ export enum AMBROSIA_ICON {
     BASE_OBT1 = 'ambrosiaBaseObtainium1',
     BASE_OFF1 = 'ambrosiaBaseOffering1',
     SING_RED1 = 'ambrosiaSingReduction1',
+    TALISMAN = 'ambrosiaTalismanBonusRuneLevel',
 
     RA_FREE2 = 'redAmbrosiaFreeLevelsRow2',
     RA_CUBE = 'redAmbrosiaRedAmbrosiaCube',
@@ -59,6 +61,7 @@ export enum AMBROSIA_ICON {
     RA_CONV2 = 'redAmbrosiaConversionImprovement2',
     RA_REDGEN = 'redAmbrosiaRedGenerationSpeed',
     RA_REDLUCK = 'redAmbrosiaRedLuck',
+    RA_YIN_YANG = 'redAmbrosiaSalvageYinYang',
 
     QUARKS2 = 'ambrosiaQuarks2',
     CUBES2 = 'ambrosiaCubes2',
@@ -67,6 +70,7 @@ export enum AMBROSIA_ICON {
     BASE_OBT2 = 'ambrosiaBaseObtainium2',
     BASE_OFF2 = 'ambrosiaBaseOffering2',
     INF_SHOP1 = 'ambrosiaInfiniteShopUpgrades1',
+    ALPHA = 'ambrosiaRuneOOMBonus',
 
     RA_FREE4 = 'redAmbrosiaFreeLevelsRow4',
     RA_CUBE_IMPR = 'redAmbrosiaRedAmbrosiaCubeImprover',
@@ -79,6 +83,7 @@ export enum AMBROSIA_ICON {
 
     SING_RED2 = 'ambrosiaSingReduction2',
     INF_SHOP2 = 'ambrosiaInfiniteShopUpgrades2',
+    LUCK4 = 'ambrosiaLuck4',
 
     RA_VISCOUNT = 'redAmbrosiaViscount',
     RA_FREE5 = 'redAmbrosiaFreeLevelsRow5',

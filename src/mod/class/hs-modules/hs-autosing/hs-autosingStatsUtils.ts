@@ -7,7 +7,9 @@ import Decimal from "break_infinity.js";
  */
 export function getAverageLast(metrics: Array<{ duration: number }>, n: number): number | null {
     if (n <= 0 || metrics.length < n) return null;
-    const sum = metrics.slice(-n).reduce((acc, m) => acc + m.duration, 0);
+    const start = metrics.length - n;
+    let sum = 0;
+    for (let i = start; i < metrics.length; i++) sum += metrics[i].duration;
     return sum / n;
 }
 
@@ -16,10 +18,35 @@ export function getAverageLast(metrics: Array<{ duration: number }>, n: number):
  */
 export function getStandardDeviation(metrics: Array<{ duration: number }>, n: number): number | null {
     if (n <= 1 || metrics.length < n) return null;
-    const slice = metrics.slice(-n);
-    const mean = slice.reduce((acc, m) => acc + m.duration, 0) / n;
-    const variance = slice.reduce((acc, m) => acc + Math.pow(m.duration - mean, 2), 0) / n;
-    return Math.sqrt(Math.max(0, variance));
+    const start = metrics.length - n;
+    let sum = 0;
+    for (let i = start; i < metrics.length; i++) sum += metrics[i].duration;
+    const mean = sum / n;
+    let sumSq = 0;
+    for (let i = start; i < metrics.length; i++) {
+        const d = metrics[i].duration - mean;
+        sumSq += d * d;
+    }
+    return Math.sqrt(Math.max(0, sumSq / n));
+}
+
+/**
+ * Returns both the average and standard deviation of the last n durations in a single pass.
+ * More efficient than calling getAverageLast + getStandardDeviation separately.
+ */
+export function getAvgAndStdLast(metrics: Array<{ duration: number }>, n: number): { avg: number | null; sd: number | null } {
+    if (n <= 0 || metrics.length < n) return { avg: null, sd: null };
+    const start = metrics.length - n;
+    let sum = 0;
+    for (let i = start; i < metrics.length; i++) sum += metrics[i].duration;
+    const avg = sum / n;
+    if (n <= 1) return { avg, sd: null };
+    let sumSq = 0;
+    for (let i = start; i < metrics.length; i++) {
+        const d = metrics[i].duration - avg;
+        sumSq += d * d;
+    }
+    return { avg, sd: Math.sqrt(Math.max(0, sumSq / n)) };
 }
 
 /**
