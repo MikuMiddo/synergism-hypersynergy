@@ -419,7 +419,7 @@ export async function openAutosingChallengesModal(
                 const originalHeight = target.getBoundingClientRect().height;
                 // Style dragged element
                 target.style.position = "fixed";
-                target.style.zIndex = "1000";
+                target.style.zIndex = "10000";
                 target.style.cursor = "grabbing";
                 target.style.pointerEvents = "none";
                 target.style.width = originalWidth + "px";
@@ -497,7 +497,7 @@ export async function openAutosingChallengesModal(
                                             placeholder.style.pointerEvents = "none";
 
                                             newDraggedElement.style.position = "fixed";
-                                            newDraggedElement.style.zIndex = "1000";
+                                            newDraggedElement.style.zIndex = "10000";
                                             newDraggedElement.style.cursor = "grabbing";
                                             newDraggedElement.style.pointerEvents = "none";
                                             newDraggedElement.style.width = newDraggedElement.offsetWidth + "px";
@@ -539,7 +539,7 @@ export async function openAutosingChallengesModal(
                                             placeholder.style.pointerEvents = "none";
 
                                             newDraggedElement.style.position = "fixed";
-                                            newDraggedElement.style.zIndex = "1000";
+                                            newDraggedElement.style.zIndex = "10000";
                                             newDraggedElement.style.cursor = "grabbing";
                                             newDraggedElement.style.pointerEvents = "none";
                                             newDraggedElement.style.width = newDraggedElement.offsetWidth + "px";
@@ -606,10 +606,12 @@ export async function openAutosingChallengesModal(
             e.preventDefault();
             const originalWidth = activeSeparator.offsetWidth;
             const originalHeight = activeSeparator.offsetHeight;
+            const offsetX = e.clientX - activeSeparator.getBoundingClientRect().left;
+            const offsetY = e.clientY - activeSeparator.getBoundingClientRect().top;
 
             const applySeparatorDragStyles = (el: HTMLElement) => {
                 el.style.position = 'fixed';
-                el.style.zIndex = '1000';
+                el.style.zIndex = '10000';
                 el.style.cursor = 'grabbing';
                 el.style.width = originalWidth + 'px';
                 el.style.height = originalHeight + 'px';
@@ -621,23 +623,25 @@ export async function openAutosingChallengesModal(
             applySeparatorDragStyles(activeSeparator);
 
             const moveAt = (clientX: number, clientY: number) => {
-                activeSeparator.style.left = clientX - originalWidth / 2 + 'px';
-                activeSeparator.style.top = clientY - originalHeight / 2 + 'px';
+                activeSeparator.style.left = clientX - offsetX + 'px';
+                activeSeparator.style.top = clientY - offsetY + 'px';
             };
             moveAt(e.clientX, e.clientY);
 
             const onMouseMove = throttle((e: MouseEvent) => {
                 moveAt(e.clientX, e.clientY);
-
+                                
                 const container = document.getElementById('hs-challenge-list-container');
                 if (!container) return;
                 const allItems = Array.from(container.querySelectorAll('.hs-challenge-item'));
-                let newIndex = allItems.length;
+                let newIndex = 0;
                 for (let i = 0; i < allItems.length; i++) {
                     const rect = allItems[i].getBoundingClientRect();
                     if (e.clientY < rect.top + rect.height / 2) {
-                        newIndex = i;
                         break;
+                    }
+                    if (!allItems[i].classList.contains('hs-if-target')) {
+                        newIndex++;
                     }
                 }
                 if (newIndex === separatorIndex) return;
@@ -662,7 +666,7 @@ export async function openAutosingChallengesModal(
             const onMouseUp = () => {
                 activeSeparator.style.position = '';
                 activeSeparator.style.zIndex = '';
-                activeSeparator.style.cursor = '';
+                activeSeparator.style.cursor = 'grab';
                 activeSeparator.style.width = '';
                 activeSeparator.style.height = '';
                 activeSeparator.style.boxShadow = '';
