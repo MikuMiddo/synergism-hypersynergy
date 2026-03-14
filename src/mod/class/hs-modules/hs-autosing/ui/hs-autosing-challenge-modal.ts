@@ -135,7 +135,7 @@ export async function openAutosingChallengesModal(
         return `
         <div class="hs-challenge-separator" data-separator-index="${separatorIndex}" style="position: relative; display: flex; align-items: center; margin: 4px 0; cursor: grab;">
             <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
-            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin: 0px 8px; display: flex; align-items: center; height: 18px;">⋮⋮ Insert here ⋮⋮</span>
+            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin: 0px 8px; display: flex; align-items: center; height: 18px;">⋮⋮ Add Here ⋮⋮</span>
             <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
         </div>`;
     };
@@ -906,15 +906,15 @@ export async function openAutosingChallengesModal(
                     workingChallenges[editingIndex] = newEntry;
                 } else {
                     workingChallenges.splice(separatorIndex, 0, newEntry);
-                        // Increment jump-target indices for IF jumps at or after the insertion point
-                        for (let i = 0; i < workingChallenges.length; i++) {
-                            const entry = workingChallenges[i];
-                            if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
-                                if (entry.ifJump.ifJumpIndex >= separatorIndex) {
-                                    entry.ifJump.ifJumpIndex++;
-                                }
+                    // Increment jump-target indices for IF jumps at or after the insertion point
+                    for (let i = 0; i < workingChallenges.length; i++) {
+                        const entry = workingChallenges[i];
+                        if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
+                            if (entry.ifJump.ifJumpIndex >= separatorIndex) {
+                                entry.ifJump.ifJumpIndex++;
                             }
                         }
+                    }
                     separatorIndex = separatorIndex + 1;
                 }
                 updateUI();

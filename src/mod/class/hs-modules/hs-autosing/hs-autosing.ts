@@ -500,9 +500,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return null;
         }
 
-        // Strategies are stored with OLD special action IDs for cross-version compatibility.
-        // Migrate to new IDs in-memory only — this copy is never persisted.
         const runtimeStrategy: HSAutosingStrategy = JSON.parse(JSON.stringify(strategy));
+        // MIGRATION NEXT STEP - This should not be needed anymore (except if users click the migrate button). To be removed.
+        // Migrate to new IDs in-memory only — this copy is never persisted.
         HSSettings.migrateStrategyActionIdsAuto(runtimeStrategy, 'toNew');
         HSLogger.log(`Autosing: loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory)`, this.context);
 

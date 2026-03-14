@@ -910,14 +910,14 @@ export class HSSettings extends HSModule {
         let normalizedStrategy = HSSettings.ensureAoagPhase(strategy);
         normalizedStrategy = HSSettings.ensureCorruptionLoadouts(normalizedStrategy);
 
-        // Always persist strategies with OLD special action IDs so they remain
-        // usable by other mod versions or by players without this mod.
+        // MIGRATION NEXT STEP - Always persist strategies with NEW special action IDs
+        // Molk's version will convert them as needed, so no problem here.
         const beforeNormalize = JSON.stringify(normalizedStrategy);
-        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toOld');
+        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toNew');
         if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" back to old special action IDs`, HSSettings.#staticContext);
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" to new special action IDs`, HSSettings.#staticContext);
         } else {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses old special action IDs — no change needed`, HSSettings.#staticContext);
+            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses new special action IDs — no change needed`, HSSettings.#staticContext);
         }
 
         this.validateStrategy(normalizedStrategy);
@@ -1357,15 +1357,17 @@ export class HSSettings extends HSModule {
             const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
             const didDropDefaults = userStrategies.length !== list.length;
 
-            // Normalize all user strategies to OLD special action IDs so that
-            // localStorage is always mod-version-agnostic (usable without this mod).
-            // Any strategies that were previously saved with new IDs get converted back.
+            // MIGRATION NEXT STEP - Normalize all user strategies to NEW special action IDs
+            // Any strategies that were previously saved with old IDs get converted to new IDs.
             let didNormalize = false;
             for (const strategy of userStrategies) {
                 const before = JSON.stringify(strategy);
-                HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
+                HSSettings.migrateStrategyActionIdsAuto(strategy, 'toNew');
                 if (before !== JSON.stringify(strategy)) {
+                    HSLogger.log(`Normalized strategy "${strategy.strategyName}" to new special action IDs during load`, HSSettings.#staticContext);
                     didNormalize = true;
+                } else {
+                    HSLogger.log(`Strategy "${strategy.strategyName}" did not require normalization`, HSSettings.#staticContext);
                 }
             }
 
@@ -1442,12 +1444,12 @@ export class HSSettings extends HSModule {
         HSSettings.updateStrategyDropdownList();
 
         HSUI.Notify(
-            `Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies}, dropped ${droppedDefaults} defaults from localStorage.`,
+            `Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`,
             { notificationType: "success" }
         );
 
         HSLogger.log(
-            `[HSSettings] Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies}, droppedDefaults=${droppedDefaults})`,
+            `[HSSettings] Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`,
             HSSettings.#staticContext
         );
     }
