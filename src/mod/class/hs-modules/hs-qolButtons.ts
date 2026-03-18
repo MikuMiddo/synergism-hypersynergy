@@ -14,6 +14,7 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQuickbarManager } from "./hs-quickbarManager";
+import { HSUI } from "../hs-core/hs-ui";
 
 type SelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: SelectorExpectation };
@@ -469,6 +470,14 @@ export class HSQOLButtons extends HSModule {
             if (currentView.getId() === SINGULARITY_VIEW.OCTERACTS) {
                 setTimeout(() => {
                     this.setOctButtonsVisibility();
+                }, 20);
+            }
+        });
+
+        gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
+            if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
+                setTimeout(() => {
+                    this.injectAmbrosiaSubtabButton();
                 }, 20);
             }
         });
@@ -953,16 +962,27 @@ export class HSQOLButtons extends HSModule {
         if (!this.eventsQuickBarContainer) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-        const bellAmount = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL?.amount ?? 0;
+        const happyHourEvent = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL;
+        const bellAmount = happyHourEvent?.amount ?? 0;
 
-        this.eventsQuickBarContainer.innerHTML = '';
         const bellSpan = document.createElement('span');
         bellSpan.className = 'events-quickbar-bells';
-        if (bellAmount <= 0) {
+        if (happyHourEvent?.ends && happyHourEvent.ends.length > 0) {
+            const endsTimes = happyHourEvent.ends
+                .map(e => new Date(e).toLocaleTimeString())
+                .join(', ');
+            bellSpan.title = `Ends at: ${endsTimes}`;
+            bellSpan.style.cursor = 'help';
+            HSLogger.log(`Events quickbar updated: ${bellAmount} Happy Hour bell ending at: ${endsTimes}`, this.context);
+        } else {
+            bellSpan.title = 'No active Happy Hour events';
             bellSpan.classList.add('no-events');
+            HSLogger.log(`Events quickbar updated: No active Happy Hour events`, this.context);
         }
+
         bellSpan.innerHTML = `${bellAmount}\uD83D\uDD14`; // Bell icon
 
+        this.eventsQuickBarContainer.innerHTML = '';
         this.eventsQuickBarContainer.appendChild(bellSpan);
     }
 
@@ -1599,5 +1619,47 @@ export class HSQOLButtons extends HSModule {
         HSLogger.debug('Disabling Events Quickbar', this.context);
         this.teardownEventsQuickbarWrapper();
         HSQuickbarManager.getInstance().disableEventsQuickbar();
+    }
+
+    /** Injects a custom button into the Ambrosia subtab when active. */
+    public injectAmbrosiaSubtabButton(): void {
+        if (document.getElementById('hs-ambrosia-loadout-idle-swap-toggle')) return;
+        const parent = document.querySelector('#singularityAmbrosia') as HTMLElement;
+        const child = document.querySelector('#ambrosiaProgressBar') as HTMLElement;
+        if (!parent || !child) return;
+
+        const afkSwapperToggle = document.createElement('button');
+        afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
+        afkSwapperToggle.textContent = 'Toggle AFK Swapper';
+
+        afkSwapperToggle.addEventListener('click', () => {
+            HSLogger.log('AFK Swapper button clicked', this.context);
+            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
+            if (idleSwapToggle) {
+                idleSwapToggle.click();
+                HSLogger.log(`ambrosiaIdleSwap toggled via quick menu`, this.context);
+            }
+        });
+
+        HSUI.injectHTMLElement(afkSwapperToggle, (element) => {
+            parent.insertBefore(element, child);
+        });
+
+        HSUI.injectStyle(`
+            button#hs-ambrosia-loadout-idle-swap-toggle {
+            margin-bottom: 10px;
+            font-family: fantasy;
+            letter-spacing: 3px;
+            border: 2px solid;
+            padding: 10px 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            background: #774ed1;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            }
+        `);
     }
 }

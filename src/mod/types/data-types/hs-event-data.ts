@@ -25,6 +25,7 @@ export enum GameEventType {
     INFO_ALL = "info-all",
     JOIN = "join",
     ERROR = "error",
+    CONSUMED = "consumed",
     EVENT_ENDED = "consumable-ended"
 }
 

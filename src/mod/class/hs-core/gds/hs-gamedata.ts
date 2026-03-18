@@ -193,15 +193,14 @@ export class HSGameData extends HSModule {
             wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
                 url: HSGlobal.Common.eventAPIUrl,
                 onMessage: async (msg) => {
+                    HSLogger.debug(`onMessage received: ${JSON.stringify(msg)}`, this.context);
                     if (msg?.type === GameEventType.INFO_ALL) {
                         self.#resetEventData();
 
                         if (msg.active && msg.active.length > 0) {
-                            HSLogger.debug(`Caught WS event: ${msg.type} - event count: ${msg.active.length}}`, 'WebSocket');
-
+                            HSLogger.debug(`Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
                             for (const { internalName, endsAt, name } of msg.active) {
                                 const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
-
                                 consumable.ends.push(endsAt);
                                 consumable.amount++;
                                 consumable.displayName = name;
@@ -210,6 +209,14 @@ export class HSGameData extends HSModule {
                             self.#eventDataUpdated();
                         } else {
                             HSLogger.debug(`Caught INFO_ALL, but no active events`, this.context);
+                        }
+                    } else if (msg?.type === GameEventType.CONSUMED) {
+                        HSLogger.debug(`Caught CONSUMED event`, this.context);
+                        const consumable = self.#gameEvents[msg?.consumable as keyof ConsumableGameEvents];
+                        if (consumable) {
+                            consumable.amount++;
+                            // consumable.ends ???
+                            self.#eventDataUpdated();
                         }
                     } else if (msg?.type === GameEventType.ERROR) {
                         HSLogger.debug(`Caught ERROR`, this.context);
