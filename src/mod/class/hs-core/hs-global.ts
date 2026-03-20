@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.11.0-dev2',
+        currentModVersion: '2.11.0-dev3',
         isLatestVersion: true,
         isModFullyLoaded: false,
 

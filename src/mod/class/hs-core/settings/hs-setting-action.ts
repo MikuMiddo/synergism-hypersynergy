@@ -169,7 +169,6 @@ export class HSSettingActions {
                     await ambrosiaMod.enableIdleSwap();
                     newState = true;
                 }
-
             }
         },
 
@@ -188,11 +187,6 @@ export class HSSettingActions {
                     // Review mode: we stop autosing process but keep the modal visible
                     autosingMod.stopAutosing({ showReviewModal: true });
                 } else {
-                    // Auto-DISABLE GDS, and start autosing
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.disable();
-                    }
                     await autosingMod.enableAutoSing();
                 }
             }
