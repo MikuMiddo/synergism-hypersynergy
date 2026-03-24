@@ -82,11 +82,11 @@ export interface HSGlobalAmbrosia extends IStoreable {
 
     idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
     idleSwapIndicatorId: string;
-    idleSwapMaxBlueTreshold: number;
-    idleSwapMinBlueTreshold: number;
+    idleSwapMaxBlueThreshold: number;
+    idleSwapMinBlueThreshold: number;
 
-    idleSwapMaxRedTreshold: number;
-    idleSwapMinRedTreshold: number;
+    idleSwapMaxRedThreshold: number;
+    idleSwapMinRedThreshold: number;
 
     R_TIME_PER_AMBROSIA: number;
     R_TIME_PER_RED_AMBROSIA: number;

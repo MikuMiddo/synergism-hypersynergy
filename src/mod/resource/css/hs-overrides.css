@@ -51,20 +51,6 @@
    box-sizing: border-box;
 }
 
-#automationQuickBar .left,
-#automationQuickBar .center,
-#automationQuickBar .right {
-   display: flex;
-   align-items: center;
-   gap: 4px;
-   flex: 0 0 auto;
-}
-
-#automationQuickBar .center:empty,
-#automationQuickBar .right:empty {
-   display: none;
-}
-
 #automationQuickBar button.autoToggle {
    display: flex;
    align-items: center;

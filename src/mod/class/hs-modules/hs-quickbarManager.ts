@@ -1,6 +1,7 @@
 import { HSLogger } from "../hs-core/hs-logger";
 
-type QuickbarSectionFactory = () => HTMLElement;
+// Canonical factory: must return an object with `element` and optional `teardown`.
+export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };
 export type QUICKBAR_ID = typeof HSQuickbarManager.QUICKBAR_IDS[keyof typeof HSQuickbarManager.QUICKBAR_IDS];
 export class HSQuickbarManager {
     private static instance: HSQuickbarManager;
@@ -15,6 +16,7 @@ export class HSQuickbarManager {
         EVENTS: 'events',
         AUTOMATION: 'automation',
         // OTHER: 'other', // add other quickbars as needed
+        AMBROSIA_MINIBARS: 'ambrosia-minibars',
         AMBROSIA: 'ambrosia',
     } as const;
 
@@ -22,12 +24,14 @@ export class HSQuickbarManager {
     private static readonly QUICKBAR_ORDER: QUICKBAR_ID[] = [
         HSQuickbarManager.QUICKBAR_IDS.EVENTS,     // left-most
         HSQuickbarManager.QUICKBAR_IDS.AUTOMATION, 
+        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS,
         HSQuickbarManager.QUICKBAR_IDS.AMBROSIA    // right-most
     ];
 
     // --- Promise-based synchronization additions ---
     private sectionInjectedPromises: Map<QUICKBAR_ID, Promise<void>> = new Map();
     private sectionInjectedResolvers: Map<QUICKBAR_ID, () => void> = new Map();
+    private teardownCallbacks: Map<QUICKBAR_ID, () => void> = new Map();
 
 
     private constructor() {}
@@ -119,7 +123,13 @@ export class HSQuickbarManager {
         const factory = this.sectionFactories.get(id);
         if (!factory) return;
         HSLogger.debug(`injecting section ${id}`, "HSQuickbarManager");
-        const el = factory();
+        const raw = factory();
+        if (!raw || !raw.element) return;
+        const el = raw.element;
+        const maybeTeardown = raw.teardown;
+        if (typeof maybeTeardown === 'function') {
+            this.teardownCallbacks.set(id, maybeTeardown);
+        }
 
         // Find the next quickbar element in order (if any)
         let nextElement: HTMLElement | null = null;
@@ -209,15 +219,24 @@ export class HSQuickbarManager {
     public enableQuickbar(
         id: QUICKBAR_ID,
         factory: QuickbarSectionFactory,
-        setupCallback?: (section: HTMLElement) => void
-    ): void {
+        setupCallback?: (section: HTMLElement) => void,
+        teardownCallback?: () => void
+    ): Promise<HTMLElement> {
         this.registerSection(id, factory);
+        // Store or clear teardown callback for this id (may be overridden by factory-returned teardown)
+        if (teardownCallback) {
+            this.teardownCallbacks.set(id, teardownCallback);
+        } else {
+            this.teardownCallbacks.delete(id);
+        }
         this.injectSection(id);
-        this.whenSectionInjected(id).then(() => {
-            const section = this.getSection(id);
+        return this.whenSectionInjected(id).then(() => {
+            const section = this.getSection(id)!;
             if (section && setupCallback) {
                 try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
             }
+            HSLogger.debug(`Quickbar ${id} enabled`, "HSQuickbarManager");
+            return section;
         });
     }
 
@@ -236,6 +255,13 @@ export class HSQuickbarManager {
      */
     public removeSection(id: QUICKBAR_ID): void {
         HSLogger.debug(`removeSection(${id}) called`, "HSQuickbarManager");
+        // Call stored teardown callback if any
+        const td = this.teardownCallbacks.get(id);
+        if (td) {
+            try { td(); } catch (e) { /* ignore teardown errors */ }
+            this.teardownCallbacks.delete(id);
+        }
+
         this.sectionFactories.delete(id);
         this.sectionOrder = this.sectionOrder.filter(x => x !== id);
         const el = this.sectionElements.get(id);
