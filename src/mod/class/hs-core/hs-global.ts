@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.11.0-dev2',
+        currentModVersion: '2.11.0-dev3',
         isLatestVersion: true,
         isModFullyLoaded: false,
 
@@ -500,10 +500,10 @@ export const HSGlobal: IHSGlobal = class {
 
         idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
         idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
-        idleSwapMaxBlueTreshold: 97,
-        idleSwapMinBlueTreshold: 3,
-        idleSwapMaxRedTreshold: 99,
-        idleSwapMinRedTreshold: 1,
+        idleSwapMaxBlueThreshold: 97,
+        idleSwapMinBlueThreshold: 3,
+        idleSwapMaxRedThreshold: 99,
+        idleSwapMinRedThreshold: 1,
 
         // Constants ripped from the game code
         R_TIME_PER_AMBROSIA: 30,

@@ -170,7 +170,7 @@ export class HSAmbrosia extends HSModule
         HSQuickbarManager.getInstance().removeSection('ambrosia');
         HSQuickbarManager.getInstance().registerSection('ambrosia', () => {
             HSLogger.debug('Ambrosia section factory called', this.context);
-            if (!this.#pageHeader) return document.createElement('div');
+            if (!this.#pageHeader) return { element: document.createElement('div') };
             const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
             let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
             if (!groupWrapper) {
@@ -184,7 +184,7 @@ export class HSAmbrosia extends HSModule
             if (quickbarsRow.lastChild !== groupWrapper) {
                 quickbarsRow.appendChild(groupWrapper);
             }
-            return groupWrapper;
+            return { element: groupWrapper };
         });
         HSQuickbarManager.getInstance().injectSection('ambrosia');
 
@@ -1145,20 +1145,20 @@ export class HSAmbrosia extends HSModule
                         const normalLoadout = this.#convertSettingLoadoutToSlot(idleSwapLoadoutNormalSetting.getValue());
                         const loadout100 = this.#convertSettingLoadoutToSlot(idleSwapLoadout100Setting.getValue());
 
-                        let blueSwapTresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
-                        let blueSwapTresholdNormalMax = blueSwapTresholdNormalMin + bluePercentageSafeThreshold;
+                        let blueSwapThresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
+                        let blueSwapThresholdNormalMax = blueSwapThresholdNormalMin + bluePercentageSafeThreshold;
 
-                        let blueSwapTreshold100Min = 100 - bluePercentageSafeThreshold;
-                        let blueSwapTreshold100Max = 100;
+                        let blueSwapThreshold100Min = 100 - bluePercentageSafeThreshold;
+                        let blueSwapThreshold100Max = 100;
 
-                        let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedTreshold;
-                        let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedTreshold;
+                        let redSwapThresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapThresholdNormalMax = redSwapThresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
 
-                        let redSwapTreshold100Min = HSGlobal.HSAmbrosia.idleSwapMaxRedTreshold;
-                        let redSwapTreshold100Max = 100;
+                        let redSwapThreshold100Min = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
+                        let redSwapThreshold100Max = 100;
 
-                        if ((blueAmbrosiaPercent >= blueSwapTreshold100Min && blueAmbrosiaPercent <= blueSwapTreshold100Max) ||
-                            (redAmbrosiaPercent >= redSwapTreshold100Min && redAmbrosiaPercent <= redSwapTreshold100Max)) {
+                        if ((blueAmbrosiaPercent >= blueSwapThreshold100Min && blueAmbrosiaPercent <= blueSwapThreshold100Max) ||
+                            (redAmbrosiaPercent >= redSwapThreshold100Min && redAmbrosiaPercent <= redSwapThreshold100Max)) {
                             if (this.#currentLoadout !== loadout100) {
                                 const loadoutSlot = await HSElementHooker.HookElement(`#${loadout100} `) as HTMLButtonElement;
 
@@ -1168,8 +1168,8 @@ export class HSAmbrosia extends HSModule
                                     loadoutSlot.click();
                                 });
                             }
-                        } else if ((blueAmbrosiaPercent >= blueSwapTresholdNormalMin && blueAmbrosiaPercent <= blueSwapTresholdNormalMax) ||
-                            (redAmbrosiaPercent >= redSwapTresholdNormalMin && redAmbrosiaPercent <= redSwapTresholdNormalMax)) {
+                        } else if ((blueAmbrosiaPercent >= blueSwapThresholdNormalMin && blueAmbrosiaPercent <= blueSwapThresholdNormalMax) ||
+                            (redAmbrosiaPercent >= redSwapThresholdNormalMin && redAmbrosiaPercent <= redSwapThresholdNormalMax)) {
                             if (this.#currentLoadout !== normalLoadout) {
                                 const loadoutSlot = await HSElementHooker.HookElement(`#${normalLoadout} `) as HTMLButtonElement;
 

@@ -421,7 +421,8 @@ export class HSAutosingSettingsFixer {
         const performanceSettingKeys = [
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
-            'ambrosiaIdleSwap'
+            'ambrosiaIdleSwap',
+            'useGameData'           // Disable GDS last
         ] as const;
 
         const disabledSettings: string[] = [];
@@ -439,7 +440,10 @@ export class HSAutosingSettingsFixer {
                 HSLogger.log(`disableUnwantedSettings: disabled "${settingKey}"`, "HSAutosingSettingsFixer");
             }
         }
-
+                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
+                    if (gdsSettingEnabled) {
+                        HSSettings.getSetting('useGameData')?.disable();
+                    }
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, "HSAutosingSettingsFixer");
         } else {
@@ -449,7 +453,9 @@ export class HSAutosingSettingsFixer {
     }
 
     public static async restoreUnwantedSettings(settingsToRestore: string[]): Promise<void> {
-        for (const settingKey of settingsToRestore) {
+        // Reverse to re-enable GDS first
+        for (let i = settingsToRestore.length - 1; i >= 0; i--) {
+            const settingKey = settingsToRestore[i];
             const setting = HSSettings.getSetting(settingKey as keyof HSSettingsDefinition);
             if (setting && typeof setting.enable === 'function') {
                 setting.enable();

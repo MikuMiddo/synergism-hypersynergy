@@ -1,25 +1,37 @@
 import { HSLogger } from "../hs-core/hs-logger";
 
-type QuickbarSectionFactory = () => HTMLElement;
-
+// Canonical factory: must return an object with `element` and optional `teardown`.
+export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };
+export type QUICKBAR_ID = typeof HSQuickbarManager.QUICKBAR_IDS[keyof typeof HSQuickbarManager.QUICKBAR_IDS];
 export class HSQuickbarManager {
     private static instance: HSQuickbarManager;
-    private sectionFactories: Map<string, QuickbarSectionFactory> = new Map();
-    private sectionElements: Map<string, HTMLElement> = new Map();
+    private sectionFactories: Map<QUICKBAR_ID, QuickbarSectionFactory> = new Map();
+    private sectionElements: Map<QUICKBAR_ID, HTMLElement> = new Map();
     private injected = false;
-    private sectionInjectedCallbacks: Map<string, (() => void)[]> = new Map();
-    private sectionOrder: string[] = [];
+    private sectionInjectedCallbacks: Map<QUICKBAR_ID, (() => void)[]> = new Map();
+    private sectionOrder: QUICKBAR_ID[] = [];
+
+    /** Canonical, type-safe quickbar IDs. Use for all quickbar references. */
+    public static readonly QUICKBAR_IDS = {
+        EVENTS: 'events',
+        AUTOMATION: 'automation',
+        // OTHER: 'other', // add other quickbars as needed
+        AMBROSIA_MINIBARS: 'ambrosia-minibars',
+        AMBROSIA: 'ambrosia',
+    } as const;
+
     // Hard-coded desired order for quickbars (left-to-right)
-    private static readonly QUICKBAR_ORDER: string[] = [
-        'events',     // left-most
-        'automation', 
-        'other',      // add other quickbars here
-        'ambrosia'    // right-most
+    private static readonly QUICKBAR_ORDER: QUICKBAR_ID[] = [
+        HSQuickbarManager.QUICKBAR_IDS.EVENTS,     // left-most
+        HSQuickbarManager.QUICKBAR_IDS.AUTOMATION, 
+        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS,
+        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA    // right-most
     ];
 
     // --- Promise-based synchronization additions ---
-    private sectionInjectedPromises: Map<string, Promise<void>> = new Map();
-    private sectionInjectedResolvers: Map<string, () => void> = new Map();
+    private sectionInjectedPromises: Map<QUICKBAR_ID, Promise<void>> = new Map();
+    private sectionInjectedResolvers: Map<QUICKBAR_ID, () => void> = new Map();
+    private teardownCallbacks: Map<QUICKBAR_ID, () => void> = new Map();
 
 
     private constructor() {}
@@ -67,7 +79,7 @@ export class HSQuickbarManager {
      * Register a quickbar section by id and factory function.
      * If already registered, replaces the factory.
      */
-    public registerSection(id: string, factory: QuickbarSectionFactory): void {
+    public registerSection(id: QUICKBAR_ID, factory: QuickbarSectionFactory): void {
         // Diagnostic log
         HSLogger.debug(`registerSection(${id}) called`, "HSQuickbarManager");
         this.sectionFactories.set(id, factory);
@@ -88,7 +100,7 @@ export class HSQuickbarManager {
      * If the section is not registered, does nothing.
      * If no parent is provided, uses ensureQuickbarsRow().
      */
-    public injectSection(id: string, parent?: HTMLElement): void {
+    public injectSection(id: QUICKBAR_ID, parent?: HTMLElement): void {
         HSLogger.debug(`injectSection(${id}) called`, "HSQuickbarManager");
         const row = parent || HSQuickbarManager.ensureQuickbarsRow();
         if (!row) return;
@@ -111,7 +123,13 @@ export class HSQuickbarManager {
         const factory = this.sectionFactories.get(id);
         if (!factory) return;
         HSLogger.debug(`injecting section ${id}`, "HSQuickbarManager");
-        const el = factory();
+        const raw = factory();
+        if (!raw || !raw.element) return;
+        const el = raw.element;
+        const maybeTeardown = raw.teardown;
+        if (typeof maybeTeardown === 'function') {
+            this.teardownCallbacks.set(id, maybeTeardown);
+        }
 
         // Find the next quickbar element in order (if any)
         let nextElement: HTMLElement | null = null;
@@ -151,7 +169,7 @@ export class HSQuickbarManager {
      * Returns a promise that resolves when the given section is injected.
      * Use this for robust async coordination.
      */
-    public whenSectionInjected(id: string): Promise<void> {
+    public whenSectionInjected(id: QUICKBAR_ID): Promise<void> {
         // If already injected, return resolved promise
         if (this.sectionElements.has(id)) {
             return Promise.resolve();
@@ -169,7 +187,7 @@ export class HSQuickbarManager {
      * Register a callback to be called when a section is injected.
      * If already injected, calls immediately.
      */
-    public onSectionInjected(id: string, callback: () => void): void {
+    public onSectionInjected(id: QUICKBAR_ID, callback: () => void): void {
         HSLogger.debug(`onSectionInjected(${id}) called`, "HSQuickbarManager");
         if (this.sectionElements.has(id)) {
             // Already injected, call immediately
@@ -186,70 +204,46 @@ export class HSQuickbarManager {
     /**
      * Get the order of registered section IDs
      */
-    public getSectionOrder(): string[] {
+    public getSectionOrder(): QUICKBAR_ID[] {
         return [...this.sectionOrder];
     }
 
     /**
      * Get the DOM element for a registered section (after injection)
      */
-    public getSection(id: string): HTMLElement | undefined {
+    public getSection(id: QUICKBAR_ID): HTMLElement | undefined {
         HSLogger.debug(`getSection(${id}) called`, "HSQuickbarManager");
         return this.sectionElements.get(id);
     }
 
-    /**
-     * Convenience wrapper to enable the automation quickbar.
-     * Accepts a factory that returns the section element and an optional setup callback
-     * to perform module-specific wiring once the section is injected.
-     */
-    public enableAutomationQuickbar(factory: QuickbarSectionFactory, setupCallback?: (section: HTMLElement) => void): void {
-        const id = 'automation';
+    public enableQuickbar(
+        id: QUICKBAR_ID,
+        factory: QuickbarSectionFactory,
+        setupCallback?: (section: HTMLElement) => void,
+        teardownCallback?: () => void
+    ): Promise<HTMLElement> {
         this.registerSection(id, factory);
-        this.injectSection(id);
-        this.whenSectionInjected(id).then(() => {
-            const section = this.getSection(id);
-            if (section && setupCallback) {
-                try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
-            }
-        });
-    }
-
-    /**
-     * Convenience wrapper to disable the automation quickbar.
-     * Accepts an optional teardown callback to allow module-specific cleanup.
-     */
-    public disableAutomationQuickbar(teardownCallback?: () => void): void {
-        const id = 'automation';
+        // Store or clear teardown callback for this id (may be overridden by factory-returned teardown)
         if (teardownCallback) {
-            try { teardownCallback(); } catch (e) { /* ignore */ }
+            this.teardownCallbacks.set(id, teardownCallback);
+        } else {
+            this.teardownCallbacks.delete(id);
         }
-        this.removeSection(id);
-    }
-
-    /**
-     * Convenience wrapper to enable the events quickbar.
-     * Accepts a factory that returns the section element and an optional setup callback
-     * to perform module-specific wiring once the section is injected.
-     */
-    public enableEventsQuickbar(factory: QuickbarSectionFactory, setupCallback?: (section: HTMLElement) => void): void {
-        const id = 'events';
-        this.registerSection(id, factory);
         this.injectSection(id);
-        this.whenSectionInjected(id).then(() => {
-            const section = this.getSection(id);
+        return this.whenSectionInjected(id).then(() => {
+            const section = this.getSection(id)!;
             if (section && setupCallback) {
                 try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
             }
+            HSLogger.debug(`Quickbar ${id} enabled`, "HSQuickbarManager");
+            return section;
         });
     }
 
-    /**
-     * Convenience wrapper to disable the events quickbar.
-     * Accepts an optional teardown callback to allow module-specific cleanup.
-     */
-    public disableEventsQuickbar(teardownCallback?: () => void): void {
-        const id = 'events';
+    public disableQuickbar(
+        id: QUICKBAR_ID,
+        teardownCallback?: () => void
+    ): void {
         if (teardownCallback) {
             try { teardownCallback(); } catch (e) { /* ignore */ }
         }
@@ -259,8 +253,15 @@ export class HSQuickbarManager {
     /**
      * Remove a section by ID
      */
-    public removeSection(id: string): void {
+    public removeSection(id: QUICKBAR_ID): void {
         HSLogger.debug(`removeSection(${id}) called`, "HSQuickbarManager");
+        // Call stored teardown callback if any
+        const td = this.teardownCallbacks.get(id);
+        if (td) {
+            try { td(); } catch (e) { /* ignore teardown errors */ }
+            this.teardownCallbacks.delete(id);
+        }
+
         this.sectionFactories.delete(id);
         this.sectionOrder = this.sectionOrder.filter(x => x !== id);
         const el = this.sectionElements.get(id);
