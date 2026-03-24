@@ -43,6 +43,16 @@ type AutomationQuickbarGroupConfig = {
 
 type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQuickbarGroupConfig;
 
+/**
+ * Automation Quickbar component.
+ *
+ * Responsibilities:
+ * - Render a compact automation quickbar with buttons that reflect and toggle
+ *   various automation features (buildings, runes, research, cubes, etc.).
+ * - Observe the DOM for relevant automation controls and update button
+ *   states/visibility reactively.
+ * - Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
+ */
 export class HSQOLAutomationQuickbar {
     // quickbar container
     automationQuickBarContainer: HTMLDivElement | null = null;
@@ -220,7 +230,7 @@ export class HSQOLAutomationQuickbar {
         'AutoAscend'
     ];
 
-    /** Returns a prepared Automation quickbar DOM node for the quickbarsRow. */
+    /** Create and return the root DOM element for the Automation quickbar. */
     public createSection(): HTMLElement {
         const container = document.createElement('div');
         container.id = 'automationQuickBar';
@@ -228,6 +238,11 @@ export class HSQOLAutomationQuickbar {
         return container;
     }
 
+    /**
+     * Resolve a selector string to an HTMLElement.
+     * @param sel CSS selector or id to resolve
+     * @returns The resolved HTMLElement or null if not found
+     */
     private resolveAutomationQuickBarElement(sel: string): HTMLElement | null {
         const el = document.querySelector(sel) as HTMLElement | null;
         if (el) return el;
@@ -242,6 +257,13 @@ export class HSQOLAutomationQuickbar {
         return null;
     }
 
+    /**
+     * Heuristically determine whether a given automation toggle/control is "on".
+     * Checks ARIA attributes, text content, specific patterns, and CSS class hints.
+     * This function is intentionally tolerant of multiple UI representations.
+     * @param el Element to inspect
+     * @returns true if element appears to be enabled/on, false otherwise
+     */
     private isElementOn(el: HTMLElement | null): boolean {
         if (!el) return false;
         try {
@@ -249,18 +271,21 @@ export class HSQOLAutomationQuickbar {
             if (ariaPressed === 'true') return true;
             const ariaChecked = el.getAttribute('aria-checked');
             if (ariaChecked === 'true') return true;
-
+            // Text-based heuristics: look for common status markers
             const text = (el.textContent || '').trim();
             if (/Auto\s+Open\s*\[OFF\]/i.test(text)) return false;
             if (/Auto\s+Open\s*\[(ON|OFF)\]/i.test(text)) return /\[ON\]/i.test(text);
             if (/Auto\s+Open\s*"?\d+%"?/i.test(text)) return true;
 
+            // Matches like "Open Cubes: [ON]"
             const openMatch = text.match(/Open\s+(Cubes|Tesseracts|Hypercubes|Platonic)\s*:?\s*\[(ON|OFF)\]/i);
             if (openMatch) return openMatch[2].toUpperCase() === 'ON';
 
+            // Generic auto-upgrade markers
             if (/Auto\s+Upgrades:\s*\[ON\]/i.test(text)) return true;
             if (/Auto\s+Upgrades:\s*\[OFF\]/i.test(text)) return false;
 
+            // Class-name or inline text hints
             const cls = el.className || '';
             if (/\b(on|enabled|active)\b/i.test(cls)) return true;
             if (/\bON\b/i.test(text) || /enabled/i.test(text)) return true;
@@ -270,14 +295,17 @@ export class HSQOLAutomationQuickbar {
         return false;
     }
 
+    /** Normalize toggle text by collapsing whitespace for stable comparisons. */
     private normalizeToggleText(text: string): string {
         return text.replace(/\s+/g, ' ').trim();
     }
 
+    /** Convert an AutomationSelectorSpec to its selector string form. */
     private selectorToString(selectorSpec: AutomationSelectorSpec): string {
         return typeof selectorSpec === 'string' ? selectorSpec : selectorSpec.selector;
     }
 
+    /** Return a canonical string representing the expected state for caching keys. */
     private expectedToString(selectorSpec: AutomationSelectorSpec): string {
         if (typeof selectorSpec === 'string' || selectorSpec.expected === undefined) {
             return 'ON_DEFAULT';
@@ -285,6 +313,11 @@ export class HSQOLAutomationQuickbar {
         return selectorSpec.expected;
     }
 
+    /**
+     * Return a cached DOM element for the selectorSpec if present, otherwise
+     * resolve it and cache the result. Uses `isConnected` to avoid returning
+     * stale nodes.
+     */
     private getCachedAutomationElement(selectorSpec: AutomationSelectorSpec): HTMLElement | null {
         const selector = this.selectorToString(selectorSpec);
         const cached = this.#selectorElementCache.get(selector);
@@ -297,6 +330,11 @@ export class HSQOLAutomationQuickbar {
         return resolved;
     }
 
+    /**
+     * Compile or retrieve a matcher function for a selectorSpec. The matcher
+     * will test whether a provided element is considered in the expected state.
+     * Results are cached keyed by selector + expected state for performance.
+     */
     private getCompiledAutomationSelectorMatcher(selectorSpec: AutomationSelectorSpec): (el: HTMLElement | null) => boolean {
         const selector = this.selectorToString(selectorSpec);
         const expected = typeof selectorSpec === 'string' ? undefined : selectorSpec.expected;
@@ -309,11 +347,13 @@ export class HSQOLAutomationQuickbar {
 
         let matcher: (el: HTMLElement | null) => boolean;
 
+        // Build matcher according to expected contract
         if (expected === undefined || expected === 'ON') {
             matcher = (el: HTMLElement | null) => this.isElementOn(el);
         } else if (expected === 'OFF') {
             matcher = (el: HTMLElement | null) => !!el && !this.isElementOn(el);
         } else {
+            // expected contains a literal text to compare against element text
             const expectedText = this.normalizeToggleText(expected);
             matcher = (el: HTMLElement | null) => {
                 if (!el) return false;
@@ -326,6 +366,10 @@ export class HSQOLAutomationQuickbar {
         return matcher;
     }
 
+    /**
+     * Schedule a single queued animation-frame render. Coalesces multiple calls
+     * so `renderFn` runs once per frame maximum.
+     */
     private queueAutomationQuickbarRender(renderFn: () => void): void {
         if (this.#queuedAutomationFrameId !== null) {
             return;
@@ -337,12 +381,14 @@ export class HSQOLAutomationQuickbar {
         });
     }
 
+    /** Helper to read the highestSingularityCount from `HSGameDataAPI`. */
     private getHighestSingularityCount(): number {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         const gameData = gameDataAPI?.getGameData();
         return gameData?.highestSingularityCount ?? 0;
     }
 
+    /** Determine whether a toggle should be visible based on `minHighestSingularityCount`. */
     private isAutomationToggleVisible(config: AutomationQuickbarToggleConfig, highestSingularityCount: number): boolean {
         const minSingularity = config.minHighestSingularityCount;
         if (minSingularity === undefined) {
@@ -351,6 +397,7 @@ export class HSQOLAutomationQuickbar {
         return highestSingularityCount >= minSingularity;
     }
 
+    /** Whether selector-visibility rules should be applied for this config. */
     private shouldApplyAutomationSelectorVisibility(config: AutomationQuickbarToggleConfig): boolean {
         if (config.minHighestSingularityCount !== undefined) {
             return false;
@@ -358,6 +405,10 @@ export class HSQOLAutomationQuickbar {
         return config.selectorVisibility !== 'none';
     }
 
+    /**
+     * Should the button be hidden when the underlying automation targets are
+     * already fully enabled? This respects a minimum singularity count.
+     */
     private shouldHideAutomationButtonWhenFullyEnabled(
         config: AutomationQuickbarToggleConfig,
         highestSingularityCount: number,
@@ -371,6 +422,7 @@ export class HSQOLAutomationQuickbar {
         return highestSingularityCount >= minSingularity;
     }
 
+    /** Return the actual element that determines visibility according to config. */
     private getVisibilityTargetElement(el: HTMLElement | null, config: AutomationQuickbarToggleConfig): HTMLElement | null {
         if (!el) return null;
         if (config.selectorVisibility === 'parent') {
@@ -379,6 +431,7 @@ export class HSQOLAutomationQuickbar {
         return el;
     }
 
+    /** Return the automation element if it exists and is visible according to selector-visibility rules in `config`. */
     private getVisibleAutomationElement(selectorSpec: AutomationSelectorSpec, config: AutomationQuickbarToggleConfig): HTMLElement | null {
         const el = this.getCachedAutomationElement(selectorSpec);
         if (!el) return null;
@@ -388,6 +441,7 @@ export class HSQOLAutomationQuickbar {
         return !!visibilityTarget && visibilityTarget.isConnected && visibilityTarget.style.display !== 'none' ? el : null;
     }
 
+    /** Narrowing helper: returns true when element is attached and visible. */
     private isElementVisibleInDom(el: HTMLElement | null): el is HTMLElement {
         return !!el && el.isConnected && el.style.display !== 'none';
     }
@@ -597,6 +651,9 @@ export class HSQOLAutomationQuickbar {
         this.#finalizeAutomationQuickbarSetup(updateAutomationUIState, requestAutomationUpdateUI);
     }
 
+    /**
+     * Stop and clear all element watchers registered for the automation quickbar.
+     */
     #clearAutomationQuickBarWatchers(): void {
         for (const watcher of this.#automationQuickBarWatcherBySelector.values()) {
             HSElementHooker.stopWatching(watcher.watcherId);
@@ -604,6 +661,9 @@ export class HSQOLAutomationQuickbar {
         this.#automationQuickBarWatcherBySelector.clear();
     }
 
+    /**
+     * Clear all pending bootstrap retry timeouts used to attempt watcher registration.
+     */
     #clearAutomationQuickbarBootstrapTimeouts(): void {
         for (const timeoutId of this.#automationQuickbarBootstrapTimeoutIds) {
             window.clearTimeout(timeoutId);
@@ -611,7 +671,9 @@ export class HSQOLAutomationQuickbar {
         this.#automationQuickbarBootstrapTimeoutIds = [];
     }
 
-    /** Cleanup observers/render queue/container for the automation quickbar. */
+    /**
+     * Cleanup observers, cancel queued renders, and remove the quickbar container.
+     */
     #teardownAutomationQuickbar(): void {
         if (this.#queuedAutomationFrameId !== null) {
             window.cancelAnimationFrame(this.#queuedAutomationFrameId);
@@ -625,6 +687,10 @@ export class HSQOLAutomationQuickbar {
         }
     }
 
+    /**
+     * Create a group button that toggles multiple selector targets.
+     * The button reflects mixed/disabled/enabled states depending on targets.
+     */
     #createAutomationGroupButton(
         selectors: readonly AutomationSelectorSpec[],
         config: AutomationQuickbarToggleConfig,
@@ -648,6 +714,7 @@ export class HSQOLAutomationQuickbar {
         img.loading = 'lazy';
         btn.appendChild(img);
 
+        // Gather visible target elements and compute their on/off state
         const getTargets = () =>
             compiledSelectors
                 .map(({ selectorSpec, matcher }) => {
@@ -680,6 +747,7 @@ export class HSQOLAutomationQuickbar {
             btn.classList.add('mixed');
         }
 
+        // Clicking toggles all targets to the desired state (on if any are off)
         btn.addEventListener('click', () => {
             const { targets, states, allOn } = getState();
             if (targets.length === 0) return;
@@ -701,6 +769,7 @@ export class HSQOLAutomationQuickbar {
         return btn;
     }
 
+    /** Collect all selector strings referenced by the automation configuration. */
     private collectAutomationQuickbarSelectors(): string[] {
         const allSelectorSet = new Set<string>();
         const configs = Object.values(HSQOLAutomationQuickbar.AUTOMATION_QUICKBAR_CONFIG) as readonly AutomationQuickbarToggleConfig[];
@@ -752,6 +821,7 @@ export class HSQOLAutomationQuickbar {
         }
     }
 
+    /** Schedule bootstrap retries to attempt watcher registration at increasing delays. */
     #scheduleAutomationQuickbarBootstrapRetries(updateUI: () => void): void {
         this.#clearAutomationQuickbarBootstrapTimeouts();
 
@@ -767,11 +837,13 @@ export class HSQOLAutomationQuickbar {
     }
 
     // Public lifecycle
+    /** Initialize the automation quickbar into the provided container. */
     public setup(container: HTMLElement): void {
         this.automationQuickBarContainer = container as HTMLDivElement;
         this.#setupAutomationQuickbar();
     }
 
+    /** Teardown the automation quickbar and remove all observers/resources. */
     public teardown(): void {
         this.#teardownAutomationQuickbar();
     }
