@@ -240,6 +240,30 @@
             warn('Could not patch stage — "gameStageStatistic" not found in bundle');
         }
 
+        // ── WINDOW DEFINE PLAYER PATCH (simple) ─────────────────────────
+        // Detect builds that call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
+        // and inject a tiny expression to expose the player symbol to window.
+        try {
+            const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}/;
+            const m = re.exec(code);
+            if (m) {
+                const idx = m.index;
+                const playerVar = m[1];
+                debug(`define player probe: idx=${idx} playerVar=${playerVar ?? 'unknown'}`);
+                if (playerVar) {
+                    const definePlayerExposeExpr = `((window.__HS_PLAYER_EXPOSED&&window.__HS_PLAYER_EXPOSED!=='missing')||((window.__HS_player=${playerVar}),(window.player=${playerVar}),(window.__HS_PLAYER_EXPOSED='define-window'),console.log('[HS] \u2705 player exposed via defineProperties (sym=${playerVar})'))),`;
+                    code = code.slice(0, idx) + definePlayerExposeExpr + code.slice(idx);
+                    log(`Patched defineProperties player exposure (player=${playerVar})`);
+                } else {
+                    warn('defineProperties player patch: anchor found but symbol extraction failed');
+                }
+            } else {
+                debug('No defineProperties(player) anchor found in bundle');
+            }
+        } catch (e) {
+            warn('Error while probing for defineProperties player patch', e);
+        }
+
         log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
 
         // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
@@ -360,8 +384,8 @@ window.__HS_BACKDOOR__ = {
             await clickWhenAvailable('buildingstab');
             await new Promise(r => setTimeout(r, 300));
 
-            // Phase 6: Load the mod
-            log('Phase 6 — loading mod script');
+            // Phase 6: Load the mod.
+            log('Phase 6 — loading mod from CDN...');
             await loadMod();
 
         } catch (e) {
@@ -385,12 +409,12 @@ window.__HS_BACKDOOR__ = {
             };
             s.onerror = () => {
                 warn('❌ Mod failed to load from CDN');
-                reject(new Error('Mod CDN load failed'));
+                reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    log('HyperSynergism loader v3.5 initialised');
+    log('HyperSynergism loader v3.5 (Molk) initialised');
 
 })();

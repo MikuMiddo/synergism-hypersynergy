@@ -385,7 +385,7 @@ window.__HS_BACKDOOR__ = {
             await new Promise(r => setTimeout(r, 300));
 
             // Phase 6: Load the mod.
-            log('Phase 6 — loading mod script');
+            log('Phase 6 — loading mod from LOCAL DEV SERVER...');
             await loadMod();
 
         } catch (e) {
@@ -395,58 +395,10 @@ window.__HS_BACKDOOR__ = {
 
     function loadMod() {
         return new Promise((resolve, reject) => {
-            log('loadMod: Starting mod load sequence');
-            let env = 'CDN';
-            let owner;
-            const detectDevAndOwner = () => {
-                try {
-                    // If bridge explicitly set __HS_ISDEV, prefer local dev server.
-                    if (typeof window !== 'undefined' && window.__HS_ISDEV === true) {
-                        env = 'LOCALDEV';
-                        owner = 'LOCALDEV';
-                        log('loadMod: Detected global __HS_ISDEV=true — using local dev server');
-                    } else { // CDN
-                        for (const sc of document.getElementsByTagName('script')) {
-                            const src = sc.src || '';
-                            const m = src.match(/\/gh\/([^\/]+)\//);
-                            log(`loadMod: Probing script scr: ${src} for owner: ${src.substring(0, 60)} => ${m ? m[1] : 'no match'}`);
-                            if (m && !owner) owner = m[1];
-                        }
-                        if (!owner) owner = 'Ferlieloi';
-                        log(`loadMod: Owner probe complete; owner=${owner}`);
-                        
-                        try {
-                            if (typeof window !== 'undefined') {
-                                window.__HS_REPO_OWNER = owner;
-                                log(`loadMod: window.__HS_REPO_OWNER set to ${owner}`); // Log the resolved owner for debugging
-                            }
-                        } catch (e) { /* ignore */ }
-                    }
-                } catch (e) {
-                    warn('loadMod: detectDevAndOwner failed:', e);
-                }
-            };
-
-            try {
-                detectDevAndOwner();
-            } catch (e) {
-                warn('loadMod: Loader owner detection failed:', e);
-            }
-
-            const localUrl = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
-            const cdnUrl = `https://cdn.jsdelivr.net/gh/${owner}/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
             const s = document.createElement('script');
-            if (window.__HS_ISDEV) {
-                s.src = localUrl;
-                log(`Loading mod from LOCAL DEV SERVER: ${localUrl}`);
-            } else {
-                s.src = cdnUrl;
-                log(`Loading mod from CDN: ${cdnUrl}`);
-            }
-
-            // Attach handlers before appending the element.
+            s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
             s.onload = () => {
-                log(`✅ Mod script loaded (${env}) (${owner})`);
+                log('✅ Mod script loaded from LOCAL DEV SERVER');
                 try {
                     window.hypersynergism.init();
                     log('✅ Mod initialised');
@@ -456,13 +408,13 @@ window.__HS_BACKDOOR__ = {
                 resolve();
             };
             s.onerror = () => {
-                warn(`❌ Mod failed to load (${env}) (${owner})`);
+                warn('❌ Mod failed to load from LOCAL DEV SERVER');
                 reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    log(`HyperSynergism loader v3.5 initialised`);
+    log('HyperSynergism loader v3.5 (DEV) initialised');
 
 })();
