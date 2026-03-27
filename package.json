@@ -17,7 +17,7 @@
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
     "dev": "node esbuild.config.js dev",
-    "release-and-tag": "node scripts/release-and-tag.js"
+    "release-and-tag": "node scripts/release-and-tag.mjs"
   },
   "license": "ISC",
   "devDependencies": {

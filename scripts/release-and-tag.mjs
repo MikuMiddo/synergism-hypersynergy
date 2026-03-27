@@ -2,6 +2,8 @@
 import { spawnSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
+import semverPkg from 'semver';
+const { semver } = semverPkg;
 
 
 // ----------------
@@ -49,8 +51,9 @@ function formatCommand(cmd, args) {
 
 // Prompt helper
 function askYesNo(prompt) {
-    return new Promise((resolve) => {
-        const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise(async (resolve) => {
+        const readline = await import('readline');
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         rl.question(`${prompt} (y/N) `, (ans) => {
             rl.close();
             resolve(/^(y|yes)$/i.test((ans || '').trim()));
@@ -71,18 +74,17 @@ const argv = process.argv.slice(2);
 if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
     console.log('release-and-tag.js — safe, conservative release helper');
     console.log('');
-    console.log('Usage: node scripts/release-and-tag.js [--commit] [--push] [-h|--help]');
+    console.log('Usage: node scripts/release-and-tag.js [-c|--commit] [-p|--push] [-h|--help]');
     console.log('');
     console.log('Flags:');
-    console.log('  --commit     Build, stage and commit release artifact and package files, then create an annotated tag v<version>');
-    console.log('  --push       Push the commit (if present) and the tag to origin (can be used with or after --commit)');
-    console.log('  -h, --help   Show this help and exit');
+    console.log('  -c, --commit     Build, stage and commit release artifact and package files, then create an annotated tag v<version>');
+    console.log('  -p, --push       Push the commit (if present) and the tag to origin (can be used with or after --commit)');
+    console.log('  -h, --help       Show this help and exit');
     console.log('');
     console.log('Examples:');
     console.log('  node scripts/release-and-tag.js                 # show this help and exit');
     console.log('  node scripts/release-and-tag.js --commit        # build, commit and tag locally');
     console.log('  node scripts/release-and-tag.js --commit --push # build, commit, tag and push');
-    console.log('  --push can be done after a --commit, or manually with `git push --follow-tags`');
     console.log('');
     console.log('Notes:');
     console.log('  - Version is read from package.json; update it manually before running.');
@@ -94,8 +96,8 @@ if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
 
 const opts = { commit: false, push: false, };
 for (const a of argv) {
-    if (a === '--commit') opts.commit = true;
-    else if (a === '--push') opts.push = true;
+    if      (a === '-c' || a === '--commit') opts.commit = true;
+    else if (a === '-p' || a === '--push') opts.push = true;
     else if (a.startsWith('-')) fatal(`Unknown flag ${a}`);
     else fatal('Positional arguments are not accepted.');
 }
@@ -115,26 +117,47 @@ const targetVersion = pkg.version;
 if (!targetVersion) fatal('no version found in package.json');
 const targetTagName = 'v' + targetVersion;
 
-
 // ----------------
-// Get latest remote tag
+// Fetch tags and get latest tag on remote
 // ----------------
 
 // Ensure git is available
 runAndCheck('git', ['--version']);
 
-// Fetch latest tags from origin
-const r = run('git', ['fetch', '--tags', '--quiet']);
-if (r.error || r.status !== 0) fatal('Failed to fetch latest tags from origin.', r);
+// Fetch tags from origin
+const fetchRes = run('git', ['fetch', '--tags', '--quiet']);
+if (fetchRes.error || fetchRes.status !== 0) fatal('Failed to fetch tags from origin.', fetchRes);
 
-// List tags sorted by creation date (latest first)
-const t = run('git', ['for-each-ref', '--sort=-creatordate', '--format=%(refname:short)', 'refs/tags']);
-if (t.error || t.status !== 0) fatal('git failed while listing tags', t);
+// 0. Check the current active branch
+const r2 = run('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+if (r2.error || r2.status !== 0) fatal('git failed while getting current branch', r2);
+const branch = r2.stdout.toString().trim();
 
-// Get the first/latest tag or use '(none)'
-const tagsOut = t.stdout ? t.stdout.toString() : '';
-const first = tagsOut.split(/\r?\n/).find(Boolean);
-const latestRemoteTag =  first || '(none)';
+// --- Search for latest reachable tag on the current branch ---
+// 1. Get the SHA of the remote branch tip
+const r3 = run('git', ['ls-remote', '--heads', 'origin', branch]);
+if (r3.error || r3.status !== 0) fatal('git failed while getting branch SHA', r3);
+const branchSHA = r3.stdout.toString().split(/\s+/)[0];
+
+// 2. Get all remote tags and their SHAs
+const r4 = run('git', ['ls-remote', '--tags', 'origin']);
+if (r4.error || r4.status !== 0) fatal('git failed while listing remote tags', r4);
+const tagLines = r4.stdout.toString().trim().split(/\r?\n/).filter(line => !line.includes('^{}'));
+
+// 3. For each tag, check if its commit is an ancestor of the branch tip
+let reachableTags = [];
+for (const line of tagLines) {
+    const [sha, ref] = line.split(/\s+/);
+    if (!sha || !ref) continue;
+    const tag = ref.replace('refs/tags/', '');
+    if (!semver.valid(tag)) continue;
+    // Check ancestry using git merge-base --is-ancestor
+    const check = run('git', ['merge-base', '--is-ancestor', sha, branchSHA]);
+    if (check.status === 0) reachableTags.push(tag);
+}
+
+// 4. Sort and get the latest
+const latestRemoteTag = reachableTags.length ? reachableTags.sort(semver.compare).pop() : '(none)';
 
 
 // ----------------
@@ -149,8 +172,10 @@ status = s.stdout ? s.stdout.toString().trim() : '';
 if (!status) {
     console.log('Working tree is clean. Continuing...');
 } else {
+    console.log('==============================================================');
     console.warn('Warning: working tree is dirty (uncommitted changes detected):');
     console.log(status);
+    console.log('==============================================================');
 }
 
 
@@ -161,20 +186,21 @@ if (!status) {
 if (opts.commit) {
     // Ensure the local tag does not already exist
     const localCheck = run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${targetTagName}`]);
-    if (localCheck.error || localCheck.status !== 0) fatal('git failed while checking local tag', localCheck);
+    if (localCheck.error) fatal('git failed while checking local tag', localCheck);
     if (localCheck.status === 0) fatal('Local tag should NOT already exist when committing.');
 
     // Sync lockfile and run release build
-    runAndCheck('npm', ['install', '--package-lock-only'], { cwd: root });
+    // Single string for the command below: avoids DeprecationWarning when shell: true
+    runAndCheck('npm install --package-lock-only', [], { shell: true });
     runAndCheck('node', [esbuildScript, 'release'], { cwd: root });
     console.log('Lockfile synced and release built.');
 
-    // Ensure the release file is tracked in HEAD
+    // check if release file is tracked in HEAD
     const t = run('git', ['ls-files', '--error-unmatch', releaseFileRel]);
     if (t.error) fatal('git failed while verifying if release file is tracked', t);
     if (t.status !== 0) fatal('Built release file is untracked.');
 
-    // Ensure the release file does not differ from HEAD
+    // check if release file differs from HEAD
     const d = run('git', ['diff', '--quiet', '--', releaseFileRel]);
     if (d.error) fatal('git failed while verifying if release file differs', d);
     if (d.status !== 0) fatal('Built release file differs from HEAD.');
@@ -198,7 +224,7 @@ if (opts.commit) {
     }
 
     // Confirmation before COMMIT and TAG
-    const ok = await askYesNo(`Latest tag on repo: ${latestRemoteTag}. Release target: ${targetTagName}. Proceed with the commit and tag?`);
+    const ok = await askYesNo(`Latest released tag on origin: ${latestRemoteTag}. Release target: ${targetTagName}. Proceed with the commit and tag?`);
     if (!ok) { console.log('Operation cancelled by user.'); process.exit(0); }
     // Commit
     runAndCheck('git', ['commit', '-m', `release: ${targetTagName}`]);
@@ -241,10 +267,20 @@ if (opts.push) {
     }
 
     // Confirmation before PUSH
-    const ok = await askYesNo(`Latest tag on repo: ${latestRemoteTag}. Local tag ${targetTagName} will be pushed. Proceed with the push?`);
+    const ok = await askYesNo(`Latest released tag on origin: ${latestRemoteTag}. Local tag ${targetTagName} will be pushed. Proceed with the push?`);
     if (!ok) { console.log('Operation cancelled by user.'); process.exit(0); }
-    // Push
-    runAndCheck('git', ['push']);
+    
+    const upstreamRes = run('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+    const hasUpstream = upstreamRes.status === 0;
+    
+    if (!hasUpstream) { 
+        const ok = await askYesNo(`No upstream exists for branch ${branch}. Proceed to set the upstream and push?`);
+        if (!ok) { console.log('Operation cancelled by user.'); process.exit(0); }
+        // Set upstream and push
+        runAndCheck('git', ['push', '--set-upstream', 'origin', branch]);
+    } else {
+        runAndCheck('git', ['push']);
+    }
     runAndCheck('git', ['push', 'origin', `refs/tags/${targetTagName}`]);
     console.log('Commit and tag pushed to origin.');
 }
