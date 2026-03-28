@@ -1,12 +1,3 @@
-/**
- * HSAutosingModal
- * Modal for autosing timer and quark/golden quark gain tracking.
- * Handles UI orchestration, DOM caching, batching updates, and chart/stat rendering.
- * Integrates modular helpers for phase stats, charting, and export.
- * Maintains unified metrics with running averages for time, quarks, and golden quarks.
- *
- * Author: XxmolkxX
- */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
@@ -29,6 +20,16 @@ import { SingularityBundle } from "./hs-autosingExportManager";
 // Class Properties and Fields
 // =============================
 
+/**
+ * Class: HSAutosingModal
+ * IsExplicitHSModule: No
+ * Description: Modal for autosing timer and quark/golden quark gain tracking.
+ *   - Handles UI orchestration, DOM caching, batching updates, and chart/stat rendering.
+ *   - Integrates modular helpers for phase stats, charting, and export.
+ *   - Maintains unified metrics with running averages for time, quarks, and golden quarks.
+ *
+ * Author: XxmolkxX
+ */
 export class HSAutosingModal {
     #context = 'HSAutosingModal';
     #modalMode: 'running' | 'review' = 'running';

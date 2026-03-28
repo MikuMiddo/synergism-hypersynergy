@@ -4,19 +4,19 @@ import { CSSValue } from "../../types/module-types/hs-ui-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
 
-/*
-    Class: HSUtils
-    IsExplicitHSModule: No
-    Description: 
-        Static utility module for Hypersynergism.
-        Functionalities include:
-            - wait() method to wait for an arbitrary amount of time
-            - uuidv4() for generating UUIDs
-            - domid() method for generating DOM-compliant unique ids
-            - hashCode() for calculating a unique hash for arbitrary string
-            - N() for pertty printing numbers
-    Author: Swiffy
-*/
+/**
+ * Class: HSUtils
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Static utility module for Hypersynergism.
+ *     Functionalities include:
+ *         - wait() method to wait for an arbitrary amount of time
+ *         - uuidv4() for generating UUIDs
+ *         - domid() method for generating DOM-compliant unique ids
+ *         - hashCode() for calculating a unique hash for arbitrary string
+ *         - N() for pretty printing numbers
+ * Author: Swiffy
+ */
 export class HSUtils {
     static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;

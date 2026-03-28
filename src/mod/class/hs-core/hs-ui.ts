@@ -13,17 +13,17 @@ import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
 import { HSModuleOptions } from "../../types/hs-types";
 
-/*
-    Class: HSUI
-    IsExplicitHSModule: Yes
-    Description: 
-        UI modules for Hypersynergism.
-        Mostly responsible for handling everything related to the mod's panel,
-        but also contains methods such as:
-            - injectCSS() for injecting arbitrary styles in to the DOM
-            - injectHTML() for injecting arbitrary HTML in to the DOM
-            - Modal() for creating and displaying custom modals
-    Author: Swiffy
+/**
+ * Class: HSUI
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     UI modules for Hypersynergism.
+ *     Mostly responsible for handling everything related to the mod's panel,
+ *     but also contains methods such as:
+ *         - injectCSS() for injecting arbitrary styles in to the DOM
+ *         - injectHTML() for injecting arbitrary HTML in to the DOM
+ *         - Modal() for creating and displaying custom modals
+ * Author: Swiffy
 */
 export class HSUI extends HSModule {
     static #staticContext = 'HSUI';

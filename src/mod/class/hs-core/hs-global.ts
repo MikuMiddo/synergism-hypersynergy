@@ -8,7 +8,7 @@ declare const HS_BUILD_VERSION: string;
 
 export const HSGlobal: IHSGlobal = class {
 
-    private constructor() {
+    constructor() {
         throw new Error("Cannot instantiate a static class");
     }
 
@@ -21,14 +21,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- Release check configuration ---
-
     static Release = {
         githubOwner: 'Ferlieloi',
         checkIntervalMs: 300000 // 5min
     }
 
     // --- GENERAL ---
-
     static General = {
         // Version number bumping should be done in package.json.version
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
@@ -44,7 +42,6 @@ export const HSGlobal: IHSGlobal = class {
     };
 
     // --- COMMON ---
-
     static Common = {
         eventAPIUrl: 'wss://synergism.cc/consumables/connect',
         pseudoAPIurl: 'https://synergism.cc/stripe/upgrades',
@@ -54,15 +51,13 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSPrototypes ---
-
-    // Default CSS transition timing 100ms
     static HSPrototypes = {
+        // Default CSS transition timing 100ms
         defaultTransitionTiming: 100
     }
 
 
     // --- HSElementHooker ---
-
     // watchElement's MutationObserver can fire max 20 times / second
     static HSElementHooker = {
         // HookElement / HookElements
@@ -88,20 +83,17 @@ export const HSGlobal: IHSGlobal = class {
 
 
     // --- HSLogger ---
-
     static HSLogger = {
         logLevel: ELogLevel.ALL,
         logSize: 5000
     }
 
     // --- HSStorage ---
-
     static HSStorage = {
         storagePrefix: 'hs-',
     }
 
     // --- HSUI ---
-
     static HSUI = {
         injectedStylesDomId: 'hs-injected-styles',
         notifyClassName: 'hs-notification',
@@ -109,14 +101,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSUIC ---
-
     static HSUIC = {
         defaultImageWidth: 32,
         defaultImageHeight: 32,
     }
 
     // --- HSSettings ---
-
     static HSSettings = {
         storageKey: 'settings',
         strategiesKey: 'strategies',

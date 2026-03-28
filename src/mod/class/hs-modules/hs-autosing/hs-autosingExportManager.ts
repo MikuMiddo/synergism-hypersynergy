@@ -1,7 +1,3 @@
-// HSAutosingExportManager.ts
-// Handles export logic for autosing data (CSV, etc.)
-// To be filled in next steps
-
 import { decompressFromUTF16 } from 'lz-string';
 import type { HSAutosingDB } from './hs-autosingDB';
 
@@ -16,8 +12,14 @@ export interface SingularityBundle {
 }
 
 /**
- * Handles export logic for autosing data (CSV, etc.).
- * Encapsulates all export-related UI and data operations.
+ * Class: HSAutosingExportManager
+ * IsExplicitHSModule: No
+ * Description:
+ *     Manages the export of autosing data, including UI state and CSV generation.
+ *     - Updates export button state based on data availability and settings.
+ *     - Exports all autosing data as a CSV file, including dynamic phase columns.
+ *     - Handles batch flushing and bundle decompression for export.
+ * Author: XxMolkxX
  */
 export class HSAutosingExportManager {
     #db: HSAutosingDB;

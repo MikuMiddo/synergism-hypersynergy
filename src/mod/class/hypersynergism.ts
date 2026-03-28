@@ -15,12 +15,12 @@ import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
 
 
-/*
-    Class: Hypersynergism
-    Description: 
-        Hypersynergism main class.
-        Instantiates the module manager and handles calls to building the mod's panel and working with mod's settings
-    Author: Swiffy
+/**
+ * Class: Hypersynergism
+ * Description: 
+ *     Hypersynergism main class.
+ *     Instantiates the module manager and handles calls to building the mod's panel and working with mod's settings
+ * Author: Swiffy
 */
 export class Hypersynergism {
     // Class context, mainly for HSLogger

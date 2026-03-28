@@ -4,11 +4,11 @@ import { HSLogger } from "../hs-core/hs-logger";
 export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };
 export type QUICKBAR_ID = typeof HSQuickbarManager.QUICKBAR_IDS[keyof typeof HSQuickbarManager.QUICKBAR_IDS];
 /**
- * HSQuickbarManager
- *
- * Manages registration, injection, ordering, and lifecycle of small UI quickbar
- * sections injected into the page header. Each section is provided via a
- * `QuickbarSectionFactory` that returns an element and optional teardown.
+ * Class: HSQuickbarManager
+ * IsExplicitHSModule: No
+ * Description: Manages registration, injection, ordering, and lifecycle of small UI quickbar
+ *     sections injected into the page header. Each section is provided via a
+ *     `QuickbarSectionFactory` that returns an element and optional teardown.
  *
  * Public lifecycle: registerSection -> injectSection/setup -> removeSection.
  */

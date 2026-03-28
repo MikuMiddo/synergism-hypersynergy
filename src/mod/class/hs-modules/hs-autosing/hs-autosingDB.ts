@@ -1,6 +1,8 @@
 /**
- * HSAutosingDB
- * Dedicated class for handling IndexedDB operations for the autosing module.
+ * Class: HSAutosingDB
+ * IsExplicitHSModule: No
+ * Description: Dedicated class for handling IndexedDB operations for the autosing module.
+ * Author: XxMolkxX
  */
 export class HSAutosingDB {
     #dbName: string;

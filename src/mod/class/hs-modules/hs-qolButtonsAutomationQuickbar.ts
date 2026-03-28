@@ -43,14 +43,12 @@ type AutomationQuickbarGroupConfig = {
 type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQuickbarGroupConfig;
 
 /**
- * Automation Quickbar component.
- *
- * Responsibilities:
- * - Render a compact automation quickbar with buttons that reflect and toggle
- *   various automation features (buildings, runes, research, cubes, etc.).
- * - Observe the DOM for relevant automation controls and update button
- *   states/visibility reactively.
- * - Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
+ * Class: HSQOLAutomationQuickbar
+ * IsExplicitHSModule: No
+ * Description: Automation Quickbar component.
+ *     Render a compact automation quickbar with buttons that reflect and toggle various automation features (buildings, runes, research, cubes, etc.).
+ *     Observe the DOM for relevant automation controls and update button states/visibility reactively.
+ *     Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
  */
 export class HSQOLAutomationQuickbar {
     #context = 'HSQOLAutomationQuickbar';

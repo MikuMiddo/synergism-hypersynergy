@@ -1,9 +1,12 @@
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 
-/*
-    Small helper to fetch the latest published GitHub tag for the configured repo.
-*/
+/**
+ * Class: HSGithub
+ * IsExplicitHSModule: No
+ * Description:
+ *     Small helper to fetch the latest published GitHub tag for the configured repo.
+ */
 export class HSGithub {
     static context: string = 'HSGithub';
 

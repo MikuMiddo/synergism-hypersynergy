@@ -16,13 +16,6 @@ import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 
-/*
-    Class: HSAutosing
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module that performs autosings.
-    Author: XxmolkxX
-*/
 
 const ZERO_CORRUPTIONS: CorruptionLoadout = {
     viscosity: 0,
@@ -46,6 +39,12 @@ type ChallengeAccessor = {
     getGoal: () => Decimal;
 };
 
+/**
+ * Class: HSAutosing
+ * IsExplicitHSModule: Yes
+ * Description: Hypersynergism module that performs autosings.
+ * Author: XxMolkxX
+ */
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 

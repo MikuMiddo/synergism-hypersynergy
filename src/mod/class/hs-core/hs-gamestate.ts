@@ -6,6 +6,13 @@ import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSGameState
+ * IsExplicitHSModule: Yes
+ * Description:
+ *     Manages the game state, including views and their transitions.
+ * Author: Swiffy
+ */
 export class HSGameState extends HSModule {
 
     #UNKNOWN_VIEW = -1;

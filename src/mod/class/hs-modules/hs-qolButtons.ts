@@ -19,12 +19,12 @@ import { HSUI } from "../hs-core/hs-ui";
 import { HSQOLAutomationQuickbar } from "./hs-qolButtonsAutomationQuickbar";
 import { HSQOLEventsQuickbar } from "./hs-qolButtonsEventsQuickbar";
 
-/*
-    Class: QOLButtons
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module which adds qol buttons to the game.
-    Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
+/**
+ *  Class: HSQOLButtons
+ *  IsExplicitHSModule: Yes
+ *  Description: 
+ *    Hypersynergism module which adds qol buttons to the game.
+ *  Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
 */
 export class HSQOLButtons extends HSModule {
     // Tracks active tab visit unsubscribers per SINGULARITY_VIEW. 

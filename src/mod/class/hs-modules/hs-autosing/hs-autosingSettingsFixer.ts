@@ -1,13 +1,11 @@
-import { HSModuleOptions } from '../../../types/hs-types';
-import { HSModule } from '../../hs-core/module/hs-module';
 import { HSLogger } from '../../hs-core/hs-logger';
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
 
 /**
  * Class: HSAutosingSettingsFixer
+ * IsExplicitHSModule: No
  * Description: Automates, corrects, and manages game settings for AutoSing.
- * Author: Copilot (based on HSQOLButtons)
  */
 export class HSAutosingSettingsFixer {
     static #context = 'HSAutosingSettingsFixer';

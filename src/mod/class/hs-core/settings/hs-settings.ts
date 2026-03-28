@@ -20,19 +20,19 @@ import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 
-/*
-    Class: HSSettings
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism's settings module.
-        Responsibilities include:
-            - Parsing settings from JSON
-            (- Saving and loading settings)
-            - Building the settings panel with setting inputs
-            - Binding appropriate events to setting changes and on/off toggles
-            - Keeping internal settings states in sync with DOM
-    Author: Swiffy
-*/
+/**
+ * Class: HSSettings
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     Hypersynergism's settings module.
+ *     Responsibilities include:
+ *         - Parsing settings from JSON
+ *         - Saving and loading settings
+ *         - Building the settings panel with setting inputs
+ *         - Binding appropriate events to setting changes and on/off toggles
+ *         - Keeping internal settings states in sync with DOM
+ * Author: Swiffy
+ */
 export class HSSettings extends HSModule {
     static #staticContext = '';
 

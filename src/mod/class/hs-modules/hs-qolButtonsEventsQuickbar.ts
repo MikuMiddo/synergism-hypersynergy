@@ -3,12 +3,12 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSLogger } from "../hs-core/hs-logger";
 
 /**
- * Events Quickbar component.
- *
- * Responsibility:
- * - Create and manage a small quickbar that displays time-limited event indicators
- *   (e.g. Happy Hour, Lotus of Rejuvenation) in the header quickbars row.
- * - Subscribe to `HSGameDataAPI` for updates and refresh the DOM accordingly.
+ * Class: HSQOLEventsQuickbar
+ * IsExplicitHSModule: No
+ * Description: Events Quickbar component.
+ *     Create and manage a small quickbar that displays time-limited event indicators
+ *     (e.g. Happy Hour, Lotus of Rejuvenation) in the header quickbars row.
+ *     Subscribe to `HSGameDataAPI` for updates and refresh the DOM accordingly.
  *
  * Lifecycle:
  * - `createSection()` returns a container element for injection.

@@ -4,6 +4,13 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSWebSocket
+ * Description: Hypersynergism module for managing WebSocket connections with automatic reconnection and message handling.
+ *   - Provides an interface for registering multiple WebSockets with custom handlers and reconnection logic.
+ *   - Uses exponential backoff for reconnection attempts and allows for custom behavior on connection events.
+ * Author: Swiffy
+ */
 export class HSWebSocket extends HSModule {
 
     #webSockets: Map<string, HSWebSocketObject<any>> = new Map();

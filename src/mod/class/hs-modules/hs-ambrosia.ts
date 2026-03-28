@@ -17,6 +17,12 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import minibarCSS from "inline:../../resource/css/module/hs-ambrosia.css";
 
+/**
+ * Class: HSAmbrosia
+ * IsExplicitHSModule: Yes
+ * Description: Hypersynergism module which manages ambrosia loadouts and quickbar interactions.
+ * Author: Swiffy
+ */
 export class HSAmbrosia extends HSModule
     implements HSPersistable, HSGameDataSubscriber {
 

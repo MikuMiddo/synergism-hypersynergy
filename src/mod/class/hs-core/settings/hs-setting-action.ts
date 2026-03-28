@@ -10,13 +10,14 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
-/*
-    Class: HSSettingActions
-    IsExplicitHSModule: No
-    Description: 
-        Helper wrapper for HSSettings.
-        Encapsulates SettingActions and their functionality.
-    Author: Swiffy
+
+/**
+ * Class: HSSettingActions
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Helper wrapper for HSSettings.
+ *     Encapsulates SettingActions and their functionality.
+ * Author: Swiffy
 */
 export class HSSettingActions {
     // Record for SettingActions
