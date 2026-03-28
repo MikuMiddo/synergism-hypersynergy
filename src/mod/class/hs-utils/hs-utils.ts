@@ -18,6 +18,7 @@ import { HSLogger } from "../hs-core/hs-logger";
     Author: Swiffy
 */
 export class HSUtils {
+    static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     static sleepTime = 5;
@@ -41,10 +42,10 @@ export class HSUtils {
         if (remaining > 0) {
             await Promise.all([
                 HSUtils.sleep(remaining),
-                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, 'HSUtils'),
+                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, HSUtils.#context),
             ]);
         } else {
-            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, 'HSUtils');
+            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, HSUtils.#context);
         }
     }
 
@@ -106,7 +107,7 @@ export class HSUtils {
                 numString = tempNum.toFixed(precision);
             }
         } catch (e) {
-            console.error(`[HS]: HSUtil.N FAILED FOR ${num}`);
+            HSLogger.error(`HSUtils.N FAILED FOR ${num}`, HSUtils.#context);
             return numString;
         }
 
@@ -190,11 +191,11 @@ export class HSUtils {
     static nullProxy<T>(proxyName: string): T {
         const nullProxy = new Proxy({}, {
             get: () => {
-                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return nullProxy;
             },
             set: () => {
-                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return true;
             }
         });
@@ -634,7 +635,7 @@ export class HSUtils {
                         this.#dialogWatcherInterval = null;
                     }
 
-                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs');
+                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
             }, HSUtils.sleepTime);

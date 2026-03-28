@@ -11,7 +11,6 @@ import timerModalCSS from "inline:../../resource/css/hs-autosingModal.css";
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
-import { HSAutosingStrategyModal } from "../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSModuleOptions } from "../../types/hs-types";
 
 /*
@@ -253,6 +252,7 @@ export class HSUI extends HSModule {
 
     #createQuickAccessMenu() {
         if (!this.#uiPanelOpenBtn) return;
+        const context = this.context;
 
         // Create the menu container
         const quickMenu = document.createElement('div');
@@ -282,7 +282,7 @@ export class HSUI extends HSModule {
                 const toggleBtn = document.getElementById(btnId) as HTMLElement;
                 if (toggleBtn) {
                     toggleBtn.click();
-                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`);
+                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`, context);
                 }
             });
             return btn;
@@ -829,7 +829,7 @@ export class HSUI extends HSModule {
     }
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
-        HSLogger.log(`[Notify] ${text}`);
+        HSLogger.log(`${text}`, '[Notify]');
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,

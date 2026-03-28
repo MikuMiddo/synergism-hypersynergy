@@ -71,7 +71,7 @@ export class HSWebSocket extends HSModule {
                     self.#reconnectWebSocket(name);
                 }, delay);
             } else {
-                HSLogger.warn(`WebSocket ${name} failed to reconnect after ${webSocketObject.reconnectionTries} tries`);
+                HSLogger.warn(`WebSocket ${name} failed to reconnect after ${webSocketObject.reconnectionTries} tries`, self.context);
                 await (webSocketObject.onRetriesFailed ?? HSUtils.Noop)();
             }
 
@@ -91,7 +91,7 @@ export class HSWebSocket extends HSModule {
             try {
                 parsedData = JSON.parse(event.data) as T | undefined;
             } catch (error) {
-                HSLogger.warn(`Failed to parse WebSocket message for ${name}: ${error}`, this.context);
+                HSLogger.warn(`Failed to parse WebSocket message for ${name}: ${error}`, self.context);
                 parsedData = undefined;
             }
 

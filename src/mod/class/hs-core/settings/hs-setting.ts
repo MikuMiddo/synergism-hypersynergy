@@ -71,7 +71,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {
-                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`);
+                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`, this.context);
                     return;
                 }
             }

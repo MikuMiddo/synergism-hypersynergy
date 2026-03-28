@@ -4,6 +4,7 @@ import { HSPatch } from "./hs-patch";
 import shop_item_map from "inline:../../resource/data/shop.json";
 
 export class PATCH_ShopItemNameMapping extends HSPatch {
+    #context = 'PATCH_ShopItemNameMapping';
 
     #shopItemNameMap?: { [key: string]: string; };
     #hoverEvent?: (event: MouseEvent) => void;
@@ -25,7 +26,7 @@ export class PATCH_ShopItemNameMapping extends HSPatch {
                 shopWrapper.delegateEventListener('mouseover', 'div', this.#hoverEvent);
             }
         } catch(err) {
-            HSLogger.error("Failed to parse shop item map");
+            HSLogger.error("Failed to parse shop item map", this.#context);
             this.#shopItemNameMap = undefined;
         }
     }

@@ -4,7 +4,7 @@ import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
- // Should I have kept using this...???
+ // Should I have kept using HSElementHooker...???
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSetting } from "../hs-core/settings/hs-setting";
@@ -561,7 +561,7 @@ export class HSQOLButtons extends HSModule {
             const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
 
             HSLogger.debug(
-                `[HSQOLButtons][GQDistributor] budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
+                `GQ Distributor: budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
                     ids.map(id => ({
                         id,
                         weight: ratios[id] ?? 0,

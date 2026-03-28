@@ -217,7 +217,7 @@ export class HSElementHooker {
             return true;
         }
 
-        HSLogger.warn(`No watcher found for uuid: ${id}`);
+        HSLogger.warn(`No watcher found for uuid: ${id}`, this.#context);
         return false;
     }
 

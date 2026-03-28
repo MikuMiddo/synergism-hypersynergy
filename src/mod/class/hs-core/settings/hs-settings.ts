@@ -1,4 +1,4 @@
-import { AutosingStrategy, HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
 import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
@@ -6,7 +6,6 @@ import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
-import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
 // Import manifest.json as an ES module (requires resolveJsonModule in tsconfig)
 import manifest from '../../../resource/json/strategies/manifest.json';
 import { HSUI } from "../hs-ui";
@@ -20,7 +19,6 @@ import { HSGlobal } from "../hs-global";
 import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
-import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 
 /*
     Class: HSSettings
@@ -467,7 +465,7 @@ export class HSSettings extends HSModule {
                                 const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
                                 controls.selectOptions.length = 0;
                                 controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-                                HSLogger.log(`[HSSettingsUI] Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`);
+                                HSLogger.log(`Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`, self.#staticContext);
                             }
                             if (controls.selectOptions) {
                                 components.push(HSUIC.Select(
@@ -865,7 +863,7 @@ export class HSSettings extends HSModule {
                 selectEl.value = toSelect;
                 setting.setValue(toSelect);
             }
-            HSLogger.log(`[HSAutosing] Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${toSelect}`);
+            HSLogger.log(`Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${toSelect}`, HSSettings.#staticContext);
         }
     }
 
@@ -915,9 +913,9 @@ export class HSSettings extends HSModule {
         const beforeNormalize = JSON.stringify(normalizedStrategy);
         HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toNew');
         if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" to new special action IDs`, HSSettings.#staticContext);
+            HSLogger.log(`saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" to new special action IDs`, HSSettings.#staticContext);
         } else {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses new special action IDs — no change needed`, HSSettings.#staticContext);
+            HSLogger.log(`saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses new special action IDs — no change needed`, HSSettings.#staticContext);
         }
 
         this.validateStrategy(normalizedStrategy);
@@ -963,7 +961,7 @@ export class HSSettings extends HSModule {
 
         HSSettings.updateStrategyDropdownList();
         HSSettings.selectAutosingStrategyByName(normalizedStrategy.strategyName);
-        HSLogger.log(`[HSAutosing] Strategy "${normalizedStrategy.strategyName}" "${isUpdate ? "updated" : "saved"}."`, 'HSAutosingStrategyModal');
+        HSLogger.log(`Strategy "${normalizedStrategy.strategyName}" "${isUpdate ? "updated" : "saved"}."`, this.#staticContext);
     }
 
     /**
@@ -982,7 +980,7 @@ export class HSSettings extends HSModule {
         const updatedStrategies = strategies.filter(s => s.strategyName !== strategyName);
         HSSettings.#strategies = HSSettings.#strategies.filter(s => s.strategyName !== strategyName);
         storageMod.setData(HSGlobal.HSSettings.strategiesKey, updatedStrategies);
-        HSLogger.log(`[HSAutosing] Strategy "${strategyName}" deleted.`, this.name ?? 'HSSettings');
+        HSLogger.log(`Strategy "${strategyName}" deleted.`, this.#staticContext);
     }
 
     static async deleteSelectedStrategy() {
@@ -1177,7 +1175,7 @@ export class HSSettings extends HSModule {
                     HSSettings.saveStrategyToStorage(parsedStrategy);
                     HSSettings.updateStrategyDropdownList();
                     HSSettings.selectAutosingStrategyByName(strategyName);
-                    HSLogger.log(`[HSAutosing] Strategy "${strategyName}" imported and selected.`, this.name ?? 'HSSettings');
+                    HSLogger.log(`Strategy "${strategyName}" imported and selected.`, HSSettings.#staticContext);
                     HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
                         notificationType: "success"
                     });
@@ -1192,7 +1190,7 @@ export class HSSettings extends HSModule {
                     HSUI.Notify("Failed to save strategy", {
                         notificationType: "error"
                     });
-                    HSLogger.log(`Import failed: ${error}`, 'HSAutosing');
+                    HSLogger.log(`Strategy import failed: ${error}`, HSSettings.#staticContext);
                 }
             });
         } else {
@@ -1284,7 +1282,7 @@ export class HSSettings extends HSModule {
             const data = await import(`../../../resource/json/strategies/${name}.json`);
             return data.default || data;
         } catch (e) {
-            HSLogger.error(`Failed to load strategy '${name}': ${e}`);
+            HSLogger.error(`Failed to load strategy '${name}': ${e}`, this.#staticContext);
             return null;
         }
     }
@@ -1413,10 +1411,7 @@ export class HSSettings extends HSModule {
                 { notificationType: "error" }
             );
 
-            HSLogger.warn(
-                `[HSSettings] Migrate&Save aborted due to invalid strategy ID states: ${invalidStrategies.join(', ')}`,
-                HSSettings.#staticContext
-            );
+            HSLogger.warn(`Migrate&Save aborted due to invalid strategy ID states: ${invalidStrategies.join(', ')}`, HSSettings.#staticContext);
             return;
         }
 
@@ -1433,25 +1428,15 @@ export class HSSettings extends HSModule {
 
         if (!saved) {
             HSUI.Notify("Failed to save migrated strategies to localStorage", { notificationType: "error" });
-            HSLogger.warn(
-                `[HSSettings] Migrate&Save failed: could not persist ${userStrategies.length} user strategies`,
-                HSSettings.#staticContext
-            );
+            HSLogger.warn(`Migrate&Save failed: could not persist ${userStrategies.length} user strategies`, HSSettings.#staticContext);
             return;
         }
 
         HSSettings.#strategies = userStrategies.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
         HSSettings.updateStrategyDropdownList();
 
-        HSUI.Notify(
-            `Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`,
-            { notificationType: "success" }
-        );
-
-        HSLogger.log(
-            `[HSSettings] Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`,
-            HSSettings.#staticContext
-        );
+        HSUI.Notify(`Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`, { notificationType: "success" });
+        HSLogger.log(`Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies} to OLD ids, dropped ${droppedDefaults} defaults from localStorage.`, HSSettings.#staticContext);
     }
 
     static #resolveStrategyActionIdState(strategy: HSAutosingStrategy): {
@@ -1600,31 +1585,16 @@ export class HSSettings extends HSModule {
         const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
 
         if (allMatchOldState) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
+            HSLogger.debug(`Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, HSSettings.#staticContext);
         } else if (allMatchNewState) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
+            HSLogger.debug(`Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, HSSettings.#staticContext);
         } else if (allShared) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
+            HSLogger.debug(`Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, HSSettings.#staticContext); 
         } else {
-            HSLogger.warn(
-                `Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
+            HSLogger.warn(`Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, HSSettings.#staticContext);
         }
 
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`,
-            'HSSettings'
-        );
+        HSLogger.debug(`Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`, HSSettings.#staticContext);
 
         // Decide direction based on explicit target — caller always knows which state they want.
         let map: Record<number, number> | null = null;
@@ -1632,7 +1602,7 @@ export class HSSettings extends HSModule {
 
         if (target === 'toNew') {
             if (hasNewOnly && !hasOldOnly) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, 'HSSettings');
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, HSSettings.#staticContext);
                 return strategy;
             } else if (hasOldOnly && !hasNewOnly) {
                 map = oldToNewActionIds;
@@ -1640,7 +1610,7 @@ export class HSSettings extends HSModule {
             }
         } else { // target === 'toOld'
             if (hasOldOnly && !hasNewOnly) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, 'HSSettings');
+                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, HSSettings.#staticContext);
                 return strategy;
             } else if (hasNewOnly && !hasOldOnly) {
                 map = newToOldActionIds;
@@ -1650,10 +1620,7 @@ export class HSSettings extends HSModule {
 
         if (!map) {
             if (hasOldOnly && hasNewOnly) {
-                HSLogger.warn(
-                    `Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`,
-                    'HSSettings'
-                );
+                HSLogger.warn(`Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`, HSSettings.#staticContext);
             } else {
                 let reason = 'no-exclusive-ids';
                 if (sharedCount > 0 && unknownCount === 0) {
@@ -1664,18 +1631,12 @@ export class HSSettings extends HSModule {
                     reason = 'shared-and-unknown-only';
                 }
 
-                HSLogger.debug(
-                    `Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`,
-                    'HSSettings'
-                );
+                HSLogger.debug(`Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`, HSSettings.#staticContext);
             }
             return strategy;
         }
 
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": selected migration direction=${direction}`,
-            'HSSettings'
-        );
+        HSLogger.debug(`Strategy "${strategy.strategyName}": selected migration direction=${direction}`, HSSettings.#staticContext);
 
         // Migrate
         let migratedCount = 0;
@@ -1698,10 +1659,7 @@ export class HSSettings extends HSModule {
         strategy.strategy?.forEach(phase => phase.strat?.forEach(migrateChallenge));
         strategy.aoagPhase?.strat?.forEach(migrateChallenge);
 
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`,
-            'HSSettings'
-        );
+        HSLogger.debug(`Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`, HSSettings.#staticContext);
 
         return strategy;
     }

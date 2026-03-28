@@ -10,7 +10,6 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSelectStringSetting, HSSetting } from "../hs-core/settings/hs-setting";
-import { QOLButtonsQuickBarSetting, AmbrosiaMinibarsSetting } from "../../types/module-types/hs-settings-types";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSStorage } from "../hs-core/hs-storage";
 import { HSUI } from "../hs-core/hs-ui";
@@ -678,40 +677,20 @@ export class HSAmbrosia extends HSModule
             });
 
             // HINT: Add a hint if no icons are present (use #loadoutState.size)
-            let hint = document.querySelector('#bbLoadoutIconHint');
+            let hint: HTMLSpanElement | null = document.getElementById('bbLoadoutIconHint');
             if (this.#loadoutState.size === 0) {
                 if (!hint) {
                     hint = document.createElement('span');
                     hint.id = 'bbLoadoutIconHint';
-                    hint.textContent = 'Drag&drop icons from the grid above to the bar below!';
-                    (hint as HTMLSpanElement).style.color = '#93acc2';
-                    (hint as HTMLSpanElement).style.marginTop = '5px';
+                    hint.textContent = 'Drag&drop icons from the grid to the bar! (Right-click on a slot to clear)';
+                    hint.style.color = '#93acc2';
+                    hint.style.marginTop = '5px';
                     originalBar.parentElement?.insertBefore(hint, originalBar);
                 }
             } else {
                 if (hint) hint.remove();
             }
         }
-    }
-
-    #applyIconToQuickbarSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${slot}`;
-        const slotElement = document.querySelector(`[id="${quickbarSlotId}"]`) as HTMLElement;
-
-        if (!slotElement) {
-            HSLogger.warn(`Could not find quickbar slot element for ${slot}`, this.context);
-            return;
-        }
-
-        const icon = HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.get(iconEnum);
-
-        if (!icon) {
-            HSLogger.warn(`Could not find icon for ${iconEnum}`, this.context);
-            return;
-        }
-
-        slotElement.classList.add('hs-ambrosia-slot');
-        slotElement.style.backgroundImage = `url(${icon.url})`;
     }
 
     #getIconEnumById(iconId: string): AMBROSIA_ICON | undefined {
@@ -1537,7 +1516,7 @@ export class HSAmbrosia extends HSModule
                 HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, {
                     notificationType: 'warning'
                 });
-                HSLogger.debug(`[Quick Import] detailed failures: ${failureSummary}`, this.context);
+                HSLogger.debug(`Quick Import detailed failures: ${failureSummary}`, this.context);
             } else {
                 HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
                     notificationType: 'success'
@@ -1554,7 +1533,7 @@ export class HSAmbrosia extends HSModule
 
             HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
             // Log detailed error context for debugging
-            HSLogger.debug(`[Quick Import] exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
+            HSLogger.debug(`Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
             HSUI.Notify('Quick Import failed', {
                 notificationType: 'error'

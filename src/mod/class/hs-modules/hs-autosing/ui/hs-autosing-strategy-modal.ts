@@ -16,6 +16,7 @@ export class HSAutosingStrategyModal {
             parentModalId?: string;
         }
     ): Promise<void> {
+        const context = 'HSAutosingStrategyModal';
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
 
@@ -185,7 +186,7 @@ export class HSAutosingStrategyModal {
                         if (isEditMode) {
                             HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
                             HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
-                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
+                            HSLogger.log(`Strategy "${strategyDraft.strategyName}" updated.`, context);
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });

@@ -42,7 +42,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     protected isEvent: boolean = false;
 
     // Subscribers for event data changes
-    private eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
+    #eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
 
     static readonly Calculations: HSCalculationDefinition[] = HSCalculationDefinitions;
 
@@ -86,7 +86,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         }
 
         // Notify subscribers
-        for (const cb of this.eventDataSubscribers) {
+        for (const cb of this.#eventDataSubscribers) {
             try {
                 cb(this.eventData);
             } catch (e) {
@@ -147,11 +147,11 @@ export abstract class HSGameDataAPIPartial extends HSModule {
      * Subscribe to event data changes. Returns an unsubscribe function.
      */
     public subscribeEventDataChange(cb: (eventData: ConsumableGameEvents | undefined) => void): () => void {
-        this.eventDataSubscribers.add(cb);
+        this.#eventDataSubscribers.add(cb);
         // Immediately call with current data
         cb(this.eventData);
         return () => {
-            this.eventDataSubscribers.delete(cb);
+            this.#eventDataSubscribers.delete(cb);
         };
     }
 

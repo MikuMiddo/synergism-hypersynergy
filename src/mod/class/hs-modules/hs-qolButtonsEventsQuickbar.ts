@@ -16,13 +16,15 @@ import { HSLogger } from "../hs-core/hs-logger";
  * - `teardown()` unsubscribes and clears runtime state.
  */
 export class HSQOLEventsQuickbar {
-    private container: HTMLDivElement | null = null;
-    private elements?: {
+    #context = 'HSQOLEventsQuickbar';
+
+    #container: HTMLDivElement | null = null;
+    #elements?: {
         happyHourSpan: HTMLSpanElement;
         happyHourAmountSpan: HTMLSpanElement;
         lotusSpan: HTMLSpanElement;
     };
-    private unsubscribeEventData: (() => void) | null = null;
+    #unsubscribeEventData: (() => void) | null = null;
 
     /** Create and return the root DOM element for the Events quickbar section. */
     public createSection(): HTMLElement {
@@ -34,28 +36,28 @@ export class HSQOLEventsQuickbar {
 
     /** Setup the quickbar section after injection. */
     public setup(container: HTMLDivElement): void {
-        this.container = container;
-        this.resetRuntime();
-        this.createDOM();
-        this.setupSubscription();
+        this.#container = container;
+        this.#resetRuntime();
+        this.#createDOM();
+        this.#setupSubscription();
     }
 
     /** Teardown the quickbar section and cleanup resources. */
     public teardown(): void {
-        this.cleanupSubscription();
-        this.resetRuntime();
-        this.container = null;
+        this.#cleanupSubscription();
+        this.#resetRuntime();
+        this.#container = null;
     }
 
     /** Reset ephemeral runtime state for the quickbar. */
-    private resetRuntime(): void {
-        if (this.container) this.container.innerHTML = '';
-        this.elements = undefined;
+    #resetRuntime(): void {
+        if (this.#container) this.#container.innerHTML = '';
+        this.#elements = undefined;
     }
 
     /** Create the child DOM structure for the quickbar and cache element references. */
-    private createDOM(): void {
-        if (!this.container) return;
+    #createDOM(): void {
+        if (!this.#container) return;
 
         // Happy Hour display (amount + bell image)
         const happyHourSpan = document.createElement('span');
@@ -81,20 +83,20 @@ export class HSQOLEventsQuickbar {
         lotusSpan.appendChild(lotusImg);
 
         // Cache references for fast updates later
-        this.elements = {
+        this.#elements = {
             happyHourSpan,
             happyHourAmountSpan: happyHourAmountSpan,
             lotusSpan
         };
 
-        this.container.appendChild(happyHourSpan);
-        this.container.appendChild(lotusSpan);
-        HSLogger.debug('Events quickbar DOM created', 'HSQOLEventsQuickbar');
+        this.#container.appendChild(happyHourSpan);
+        this.#container.appendChild(lotusSpan);
+        HSLogger.debug('Events quickbar DOM created', this.#context);
     }
 
     /** Pull latest event data and update the quickbar DOM. */
-    private updateDOM(): void {
-        if (!this.elements) return;
+    #updateDOM(): void {
+        if (!this.#elements) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
         const eventData = gameDataAPI.getEventData();
@@ -125,7 +127,7 @@ export class HSQOLEventsQuickbar {
         }
 
         // Update cached elements with computed values and adjust visibility classes
-        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.elements;
+        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.#elements;
         happyHourSpan.title = hhTooltipText;
         happyHourAmountSpan.textContent = `${happyHourAmount}`;
         if (happyHourEvent?.ends?.length === 0) {
@@ -141,28 +143,28 @@ export class HSQOLEventsQuickbar {
             lotusSpan.classList.remove('hs-hidden');
         }
 
-        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, 'HSQOLEventsQuickbar');
+        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.#context);
     }
 
     /** Subscribe to game-data event changes and schedule DOM updates. */
-    private setupSubscription(): void {
-        if (this.unsubscribeEventData) return;
-        if (!this.elements) return;
+    #setupSubscription(): void {
+        if (this.#unsubscribeEventData) return;
+        if (!this.#elements) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
 
         if (gameDataAPI && typeof gameDataAPI.subscribeEventDataChange === 'function') {
-            this.unsubscribeEventData = gameDataAPI.subscribeEventDataChange(() => { this.updateDOM(); }) ?? null;
-            HSLogger.debug('Subscribed to event data changes for Events Quickbar', 'HSQOLEventsQuickbar');
+            this.#unsubscribeEventData = gameDataAPI.subscribeEventDataChange(() => { this.#updateDOM(); }) ?? null;
+            HSLogger.debug('Subscribed to event data changes for Events Quickbar', this.#context);
         }
     }
 
     /** Cleanup any active subscription to game-data changes. */
-    private cleanupSubscription(): void {
-        if (this.unsubscribeEventData) {
-            try { this.unsubscribeEventData(); } catch (e) { /* ignore */ }
-            this.unsubscribeEventData = null;
-            HSLogger.debug('Unsubscribed from event data changes for Events Quickbar', 'HSQOLEventsQuickbar');
+    #cleanupSubscription(): void {
+        if (this.#unsubscribeEventData) {
+            try { this.#unsubscribeEventData(); } catch (e) { /* ignore */ }
+            this.#unsubscribeEventData = null;
+            HSLogger.debug('Unsubscribed from event data changes for Events Quickbar', this.#context);
         }
     }
 }

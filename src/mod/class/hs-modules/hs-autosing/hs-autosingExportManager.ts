@@ -20,11 +20,11 @@ export interface SingularityBundle {
  * Encapsulates all export-related UI and data operations.
  */
 export class HSAutosingExportManager {
-    private db: HSAutosingDB;
-    private getCompressedBundles: () => string[];
-    private exportButton: HTMLButtonElement | null;
-    private getAdvancedDataCollectionEnabled: () => boolean;
-    private getSingularityBundlesCount: () => number;
+    #db: HSAutosingDB;
+    #getCompressedBundles: () => string[];
+    #exportButton: HTMLButtonElement | null;
+    #getAdvancedDataCollectionEnabled: () => boolean;
+    #getSingularityBundlesCount: () => number;
 
     /**
      * Constructs a new export manager.
@@ -37,11 +37,11 @@ export class HSAutosingExportManager {
         getAdvancedDataCollectionEnabled: () => boolean,
         getSingularityBundlesCount: () => number
     }) {
-        this.db = options.db;
-        this.getCompressedBundles = options.getCompressedBundles;
-        this.exportButton = options.exportButton;
-        this.getAdvancedDataCollectionEnabled = options.getAdvancedDataCollectionEnabled;
-        this.getSingularityBundlesCount = options.getSingularityBundlesCount;
+        this.#db = options.db;
+        this.#getCompressedBundles = options.getCompressedBundles;
+        this.#exportButton = options.exportButton;
+        this.#getAdvancedDataCollectionEnabled = options.getAdvancedDataCollectionEnabled;
+        this.#getSingularityBundlesCount = options.getSingularityBundlesCount;
     }
 
     /**
@@ -49,16 +49,16 @@ export class HSAutosingExportManager {
      * Disables or hides the button if export is not possible.
      */
     public updateExportButton(): void {
-        if (!this.exportButton) return;
-        const isEnabled = this.getAdvancedDataCollectionEnabled();
-        const hasData = this.getCompressedBundles().length > 0;
+        if (!this.#exportButton) return;
+        const isEnabled = this.#getAdvancedDataCollectionEnabled();
+        const hasData = this.#getCompressedBundles().length > 0;
         const visible = isEnabled;
-        this.exportButton.style.display = visible ? 'block' : 'none';
+        this.#exportButton.style.display = visible ? 'block' : 'none';
         if (visible) {
-            this.exportButton.disabled = !hasData;
-            this.exportButton.style.opacity = hasData ? '1' : '0.5';
-            this.exportButton.textContent = hasData
-                ? `📊 Export Data (${this.getSingularityBundlesCount()} singularities)`
+            this.#exportButton.disabled = !hasData;
+            this.#exportButton.style.opacity = hasData ? '1' : '0.5';
+            this.#exportButton.textContent = hasData
+                ? `📊 Export Data (${this.#getSingularityBundlesCount()} singularities)`
                 : '📊 No Data to Export';
         }
     }
@@ -73,12 +73,12 @@ export class HSAutosingExportManager {
         compressToUTF16: (input: string) => string,
         decompressFromUTF16: (input: string) => string
     ): void {
-        if (!this.getAdvancedDataCollectionEnabled()) {
+        if (!this.#getAdvancedDataCollectionEnabled()) {
             alert('No data to export');
             return;
         }
-        this.db.flushBatch(compressToUTF16).then(() => {
-            const compressedBundles = this.getCompressedBundles();
+        this.#db.flushBatch(compressToUTF16).then(() => {
+            const compressedBundles = this.#getCompressedBundles();
             const localBundles: SingularityBundle[] = [];
             for (const compressed of compressedBundles) {
                 const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));

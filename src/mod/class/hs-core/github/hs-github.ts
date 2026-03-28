@@ -27,7 +27,7 @@ export class HSGithub {
             if (!ghResp.ok) return null;
             const ghJson = await ghResp.json();
             if (Array.isArray(ghJson) && ghJson.length > 0 && ghJson[0].name) {
-                HSLogger.debug(`[HSGithub] Latest tag from GitHub API: ${ghJson[0].name}`, this.context);
+                HSLogger.debug(`Latest tag from GitHub API: ${ghJson[0].name}`, this.context);
                 HSGithub.latestTag = ghJson[0].name;
                 return ghJson[0].name;
             }
