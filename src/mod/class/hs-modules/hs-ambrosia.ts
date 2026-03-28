@@ -44,7 +44,6 @@ export class HSAmbrosia extends HSModule
         #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
             filter: brightness(150%);
         }
-        
         .hs-ambrosia-active-slot {
             --angle: 0deg;
             border-image: conic-gradient(
@@ -62,16 +61,13 @@ export class HSAmbrosia extends HSModule
                 #ff0095, 
                 #ff5e00
             ) 1;
-            
             animation: hue-rotate 6s linear infinite;
         }
-
         @keyframes hue-rotate {
             to {
                 --angle: 360deg;
             }
         }
-
         @property --angle {
             syntax: '<angle>';
             initial-value: 0deg;
@@ -80,13 +76,11 @@ export class HSAmbrosia extends HSModule
     `;
 
     #quickbarCSSId = 'hs-ambrosia-quickbar-css';
-
     #idleLoadoutCSS = `
         #hs-ambrosia-loadout-idle-swap-indicator {
             margin-bottom: 10px;
             font-family: fantasy;
             letter-spacing: 3px;
-
             background: linear-gradient(to right, #774ed1 20%, #00affa 30%, #0190cd 70%, #774ed1 80%);
             -webkit-background-clip: text;
             background-clip: text;
@@ -94,22 +88,18 @@ export class HSAmbrosia extends HSModule
             background-size: 500% auto;
             animation: hs-loadout-ind-glow 3.5s ease-in-out infinite alternate;
         }
-
         @keyframes hs-loadout-ind-glow {
             0% {
                 background-position: 0% 50%;
             }
-
             100% {
                 background-position: 100% 50%;
             }
         }
-
         @-webkit-keyframes hs-loadout-ind-glow {
             0% {
                 background-position: 0% 50%;
             }
-
             100% {
                 background-position: 100% 50%;
             }
@@ -686,6 +676,21 @@ export class HSAmbrosia extends HSModule
                     slot.style.backgroundImage = '';
                 }
             });
+
+            // HINT: Add a hint if no icons are present (use #loadoutState.size)
+            let hint = document.querySelector('#bbLoadoutIconHint');
+            if (this.#loadoutState.size === 0) {
+                if (!hint) {
+                    hint = document.createElement('span');
+                    hint.id = 'bbLoadoutIconHint';
+                    hint.textContent = 'Drag&drop icons from the grid above to the bar below!';
+                    (hint as HTMLSpanElement).style.color = '#93acc2';
+                    (hint as HTMLSpanElement).style.marginTop = '5px';
+                    originalBar.parentElement?.insertBefore(hint, originalBar);
+                }
+            } else {
+                if (hint) hint.remove();
+            }
         }
     }
 
