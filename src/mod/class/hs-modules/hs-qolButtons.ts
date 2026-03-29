@@ -4,7 +4,6 @@ import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
- // Should I have kept using HSElementHooker...???
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSetting } from "../hs-core/settings/hs-setting";
@@ -263,7 +262,7 @@ export class HSQOLButtons extends HSModule {
 
     async #unhideButtons(containerId: string, selector: string): Promise<void> {
         try {
-            const container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 5000);
+            const container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
             const buttons = container.querySelectorAll<HTMLButtonElement>(selector);
             buttons.forEach(button => button.style.display = '');
         } catch (e) {
@@ -284,7 +283,7 @@ export class HSQOLButtons extends HSModule {
 
         let container: HTMLElement;
         try {
-            container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 1000);
+            container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
         } catch (e) {
             HSLogger.warn(`#hideButtons: Could not find #${containerId}: ${e}`, this.context);
             return;
@@ -724,8 +723,8 @@ export class HSQOLButtons extends HSModule {
     public async injectAFKSwapperToggleButton(): Promise<void> {
         if (document.getElementById('hs-ambrosia-loadout-idle-swap-toggle')) return;
         try {
-            const parent = await HSUtils.waitForElement<HTMLElement>('#singularityAmbrosia', 1000);
-            const child = await HSUtils.waitForElement<HTMLElement>('#ambrosiaProgressBar', 1000);
+            const parent = await HSElementHooker.HookElement('#singularityAmbrosia', undefined, 2000);
+            const child = await HSElementHooker.HookElement('#ambrosiaProgressBar', undefined, 2000);
             const afkSwapperToggle = document.createElement('button');
             afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
             afkSwapperToggle.textContent = 'Toggle AFK Swapper';
