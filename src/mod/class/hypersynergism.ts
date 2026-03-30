@@ -77,29 +77,7 @@ export class Hypersynergism {
             notificationType: "success"
         });
 
-        // I'm not really sure how to do the code block below cleanly (and where)...
-        // I think checking the "==UserScript==" block could be cleaner. But reading the loader doesn't feels clean anyway ><
-        // Before this, I was using a __HS_IS_DEV set by the loader (and __HS_REPO_OWNER), but that didn't felt clean too (in restrospect it felt cleaner than this ^^")
-        // Search for the loader script url to determine if we're in dev mode
-        /*
-        const regexIsDev = /const\s+url\s*=\s*`http:\/\/127\.0\.0\.1:8080\/hypersynergism\.js\?/;
-        for (const script of document.scripts) {
-            if (!script.src && script.textContent) {
-                const isDev = script.textContent.match(regexIsDev);
-                if (isDev) HSGlobal.General.isDev = true;
-            }
-        }
-        */
-        
-        this.#versionCheckIvl = setInterval(async () => {
-            // isLatestTag() handles the styling
-            const isLatest = await HSGithub.isLatestTag();
-            if (!isLatest) {
-                HSGlobal.General.isLatestVersion = false;
-                clearInterval(this.#versionCheckIvl);
-                this.#versionCheckIvl = undefined;
-            }
-        }, HSGlobal.Release.checkIntervalMs);
+        HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
     }
 
     #buildUIPanelContents() {
@@ -177,7 +155,6 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: 'Mod Github' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki_features-btn', text: 'Mod Features' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-website-btn', text: 'Mod Website' }),
                     HSUIC.Div({
                         html: 'Other tools',
                         styles: {
@@ -287,10 +264,6 @@ export class Hypersynergism {
             window.open(HSGlobal.General.modWikiFeaturesUrl, '_blank')
         });
 
-        document.querySelector('#hs-panel-mod-website-btn')?.addEventListener('click', () => {
-            window.open(HSGlobal.General.modWebsiteUrl, '_blank')
-        });
-
         document.querySelector('#hs-panel-dump-settings-btn')?.addEventListener('click', () => {
             HSSettings.dumpToConsole();
         });
@@ -327,8 +300,6 @@ export class Hypersynergism {
 
         document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async () => {
             const isLatest = await HSGithub.isLatestTag();
-            const latest = await HSGithub.getLatestRemoteTag();
-            HSLogger.log(`Tag check - is latest: ${isLatest}, current tag: ${HSGithub.currentTag}, latest version: ${latest}`, this.#context);
 
             if (isLatest) {
                 HSUI.Notify('You are using the latest version of Hypersynergism!', {

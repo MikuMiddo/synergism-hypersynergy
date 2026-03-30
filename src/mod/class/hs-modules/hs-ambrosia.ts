@@ -1661,4 +1661,3 @@ export class HSAmbrosia extends HSModule
         HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
     }
 }
-

@@ -404,7 +404,7 @@ window.__HS_BACKDOOR__ = {
 
     function loadMod() {
         window.__HS_IS_DEV = true;
-        const repoOwner = 'maenhiir';
+        const repoOwner = 'maenhiir'; // for tests
         window.__HS_REPO_OWNER = repoOwner;
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');

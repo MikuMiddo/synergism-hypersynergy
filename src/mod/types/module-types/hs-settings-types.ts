@@ -227,4 +227,3 @@ export interface GQDistributorRatio5Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio6Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio7Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio8Setting extends HSSettingBase<number> { }
-

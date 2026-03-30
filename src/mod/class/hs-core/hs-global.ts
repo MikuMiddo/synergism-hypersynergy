@@ -33,22 +33,21 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- Release check configuration ---
     static Release = {
-        githubOwner: 'Ferlieloi',
-        checkIntervalMs: 900000 // 15min
+        githubOwner: 'Ferlieloi',  // Could we do without this ????
+        isLatestVersion: true,
+        checkIntervalMs: 900000    // 15min
     }
 
     // --- GENERAL ---
     static General = {
         // Version number bumping should be done in package.json.version
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
-        isLatestVersion: true,
         isModFullyLoaded: false,
         isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
-        modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
-        modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',
-        modWikiFeaturesUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features',
-        modWebsiteUrl: 'https://ahvonenj.github.io/synergism-hypersynergy/',
+        get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
+        get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
+        get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
         heaterUrl: 'https://docs.google.com/spreadsheets/d/1v02fjAeAHtLBMB5-7Spz5OHVb-eEDg7m5ISi5Mk0YAY/edit?usp=sharing'
     };
 
@@ -66,7 +65,6 @@ export const HSGlobal: IHSGlobal = class {
         // Default CSS transition timing 100ms
         defaultTransitionTiming: 100
     }
-
 
     // --- HSElementHooker ---
     // watchElement's MutationObserver can fire max 20 times / second
@@ -91,7 +89,6 @@ export const HSGlobal: IHSGlobal = class {
             attributeFilter: []
         }
     }
-
 
     // --- HSLogger ---
     static HSLogger = {
@@ -140,15 +137,10 @@ export const HSGlobal: IHSGlobal = class {
             'stopSniffOnError',
             // These three settings auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            'startAutosing',
             'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
-
-    /*static HSSettingAction = {
-        
-    }*/
 
     static HSMouse = {
         autoClickIgnoredElements: [

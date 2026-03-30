@@ -787,5 +787,3 @@ export class HSQOLButtons extends HSModule {
         }
     }
 }
-
-

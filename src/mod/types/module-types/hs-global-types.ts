@@ -17,18 +17,17 @@ export interface HSGlobalDebug {
 
 export interface HSGlobalRelease {
     githubOwner: string;
+    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 
 export interface HSGlobalGeneral {
     currentModVersion: string;
-    isLatestVersion: boolean;
     isModFullyLoaded: boolean;
     isDev: boolean;
     modGithubUrl: string;
     modWikiUrl: string;
     modWikiFeaturesUrl: string;
-    modWebsiteUrl: string;
     heaterUrl: string;
 }
 

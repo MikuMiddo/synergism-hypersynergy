@@ -102,32 +102,39 @@ export class HSQOLEventsQuickbar {
         const eventData = gameDataAPI.getEventData();
         if (!eventData) return;
 
-        // Extract relevant events
         const happyHourEvent = eventData?.HAPPY_HOUR_BELL;
         const lotusEvent = eventData?.LOTUS_OF_REJUVENATION;
         const happyHourAmount = happyHourEvent?.amount ?? 0;
 
-        // Build tooltip texts
-        let hhTooltipText = '';
+        const hhTooltipText = this.#formatHappyHourTooltip(happyHourEvent, happyHourAmount);
+        const lotusTooltipText = this.#formatLotusTooltip(lotusEvent);
+
+        this.#applyEventView(happyHourEvent, happyHourAmount, hhTooltipText, lotusEvent, lotusTooltipText);
+
+        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.#context);
+    }
+
+    #formatHappyHourTooltip(happyHourEvent: any, happyHourAmount: number): string {
         if (happyHourEvent?.ends && happyHourEvent.ends.length > 0) {
             const hhEndsTimes = happyHourEvent.ends
                 .map((e: any) => new Date(e).toLocaleTimeString(undefined, { hour12: false }))
                 .join(', ');
-            hhTooltipText = `${happyHourAmount} HH ending at: ${hhEndsTimes}`;
-        } else {
-            hhTooltipText = 'No active HH';
+            return `${happyHourAmount} HH ending at: ${hhEndsTimes}`;
         }
+        return 'No active HH';
+    }
 
-        let lotusTooltipText = '';
+    #formatLotusTooltip(lotusEvent: any): string {
         if (lotusEvent?.ends && lotusEvent.ends.length > 0) {
             const lotusEndTime = new Date(lotusEvent.ends[0]).toLocaleTimeString(undefined, { hour12: false });
-            lotusTooltipText = `Lotus until: ${lotusEndTime}`;
-        } else {
-            lotusTooltipText = 'No active Lotus';
+            return `Lotus until: ${lotusEndTime}`;
         }
+        return 'No active Lotus';
+    }
 
-        // Update cached elements with computed values and adjust visibility classes
-        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.#elements;
+    #applyEventView(happyHourEvent: any, happyHourAmount: number, hhTooltipText: string, lotusEvent: any, lotusTooltipText: string): void {
+        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.#elements!;
+
         happyHourSpan.title = hhTooltipText;
         happyHourAmountSpan.textContent = `${happyHourAmount}`;
         if (happyHourEvent?.ends?.length === 0) {
