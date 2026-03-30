@@ -1,6 +1,7 @@
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSWebSocket } from "../hs-core/hs-websocket";
 
 /**
  * Class: HSQOLEventsQuickbar
@@ -82,6 +83,10 @@ export class HSQOLEventsQuickbar {
         lotusImg.src = 'Pictures/PseudoShop/LOTUS.png';
         lotusSpan.appendChild(lotusImg);
 
+        // default status before any WS update: no active HH and hidden Lotus.
+        happyHourSpan.classList.add('no-event');
+        lotusSpan.classList.add('hs-hidden');
+
         // Cache references for fast updates later
         this.#elements = {
             happyHourSpan,
@@ -130,6 +135,26 @@ export class HSQOLEventsQuickbar {
             return `Lotus until: ${lotusEndTime}`;
         }
         return 'No active Lotus';
+    }
+
+    #setVisible(visible: boolean): void {
+        if (this.#container) {
+            if (visible) {
+                this.#container.classList.remove('hs-hidden');
+            } else {
+                this.#container.classList.add('hs-hidden');
+            }
+        }
+    }
+
+    #isConnected(): boolean {
+        const wsModule = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
+        if (!wsModule) return false;
+
+        const ws = wsModule.getWebSocket('consumable-event-socket');
+        if (!ws || !ws.socket) return false;
+
+        return ws.socket.readyState === WebSocket.OPEN;
     }
 
     #applyEventView(happyHourEvent: any, happyHourAmount: number, hhTooltipText: string, lotusEvent: any, lotusTooltipText: string): void {

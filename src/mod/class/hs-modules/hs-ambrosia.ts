@@ -372,6 +372,7 @@ export class HSAmbrosia extends HSModule
         this.activeLoadout = undefined;
     }
 
+    
     // ==============================================
     // -------- Ambrosia Minibars (Quickbar) --------
     // ==============================================
