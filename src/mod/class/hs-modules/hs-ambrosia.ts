@@ -51,35 +51,6 @@ export class HSAmbrosia extends HSModule
         #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
             filter: brightness(150%);
         }
-        .hs-ambrosia-active-slot {
-            --angle: 0deg;
-            border-image: conic-gradient(
-                from var(--angle), 
-                #ff5e00, 
-                #ff9a00, 
-                #ffcd00, 
-                #e5ff00, 
-                #a5ff00, 
-                #00ffc8, 
-                #00c8ff, 
-                #00a5ff, 
-                #9500ff, 
-                #ff00e1, 
-                #ff0095, 
-                #ff5e00
-            ) 1;
-            animation: hue-rotate 6s linear infinite;
-        }
-        @keyframes hue-rotate {
-            to {
-                --angle: 360deg;
-            }
-        }
-        @property --angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
     `;
 
     #quickbarCSSId = 'hs-ambrosia-quickbar-css';
@@ -424,6 +395,7 @@ export class HSAmbrosia extends HSModule
             groupWrapper.id = 'hs-ambrosia-group-wrapper';
             groupWrapper.style.display = 'flex';
             groupWrapper.style.flexDirection = 'column';
+            groupWrapper.style.justifyContent = "flex-end";
             quickbarsRow.appendChild(groupWrapper);
         }
         // Move to last child if not already
@@ -495,8 +467,8 @@ export class HSAmbrosia extends HSModule
 
         containers.forEach(container => {
             if (container) {
-                container.querySelectorAll('.hs-ambrosia-active-slot').forEach(slot => {
-                    slot.classList.remove('hs-ambrosia-active-slot');
+                container.querySelectorAll('.hs-rainbow-border').forEach(slot => {
+                    slot.classList.remove('hs-rainbow-border');
                 });
             }
         });
@@ -572,12 +544,12 @@ export class HSAmbrosia extends HSModule
         }
 
         const slots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
-        slots.forEach((slot) => slot.classList.remove('hs-ambrosia-active-slot'));
+        slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
 
         const targetId = `hs-ambrosia-quickbar-blueberryLoadout${slotNumber}`;
         const activeSlot = quickBar.querySelector(`#${targetId}`);
         if (activeSlot) {
-            activeSlot.classList.add('hs-ambrosia-active-slot');
+            activeSlot.classList.add('hs-rainbow-border');
         } else {
             HSLogger.warn(`No activeSlot found in quickBar for slot ${slotNumber}`, this.context);
         }
@@ -591,12 +563,12 @@ export class HSAmbrosia extends HSModule
         }
 
         const slots = originalQuickBar.querySelectorAll('.blueberryLoadoutSlot');
-        slots.forEach((slot) => slot.classList.remove('hs-ambrosia-active-slot'));
+        slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
 
         const targetId = `blueberryLoadout${slotNumber}`;
         const activeSlot = originalQuickBar.querySelector(`#${targetId}`);
         if (activeSlot) {
-            activeSlot.classList.add('hs-ambrosia-active-slot');
+            activeSlot.classList.add('hs-rainbow-border');
         } else {
             HSLogger.warn(`No activeSlot found in originalQuickBar for slot ${slotNumber}`, this.context);
         }
@@ -862,7 +834,7 @@ export class HSAmbrosia extends HSModule
         let failures: { index: number; reason: string }[] = [];
         try {
             previouslyActiveSlot = document.querySelector(
-                '.blueberryLoadoutSlot.hs-ambrosia-active-slot'
+                '.blueberryLoadoutSlot.hs-rainbow-border'
             ) as HTMLButtonElement | null;
             // previous active slot logged only on error
 

@@ -26,6 +26,7 @@ export class HSQuickbarManager {
     public static readonly QUICKBAR_IDS = {
         EVENTS: 'events',
         AUTOMATION: 'automation',
+        CORRUPTION: 'corruption',
         // OTHER: 'other', // add other quickbars as needed
         AMBROSIA_MINIBARS: 'ambrosia-minibars',
         AMBROSIA: 'ambrosia',
@@ -34,7 +35,8 @@ export class HSQuickbarManager {
     /** Hard-coded desired order for quickbars (left-to-right) */
     static readonly #QUICKBAR_ORDER: QUICKBAR_ID[] = [
         HSQuickbarManager.QUICKBAR_IDS.EVENTS,     // left-most
-        HSQuickbarManager.QUICKBAR_IDS.AUTOMATION, 
+        HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
+        HSQuickbarManager.QUICKBAR_IDS.CORRUPTION,
         HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS,
         HSQuickbarManager.QUICKBAR_IDS.AMBROSIA    // right-most
     ];

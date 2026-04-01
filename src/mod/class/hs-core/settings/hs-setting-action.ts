@@ -269,6 +269,18 @@ export class HSSettingActions {
             } else {
                 qolButtonsMod.enableEventsQuickbar();
             }
+        },
+
+        corruptionQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.disableCorruptionQuickbar();
+            } else {
+                qolButtonsMod.enableCorruptionQuickbar();
+            }
         }
     }
 

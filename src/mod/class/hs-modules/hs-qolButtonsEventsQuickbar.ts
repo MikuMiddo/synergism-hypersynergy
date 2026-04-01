@@ -20,7 +20,7 @@ export class HSQOLEventsQuickbar {
     #context = 'HSQOLEventsQuickbar';
 
     #container: HTMLDivElement | null = null;
-    #elements?: {
+    #cachedElements?: {
         happyHourSpan: HTMLSpanElement;
         happyHourAmountSpan: HTMLSpanElement;
         lotusSpan: HTMLSpanElement;
@@ -53,7 +53,7 @@ export class HSQOLEventsQuickbar {
     /** Reset ephemeral runtime state for the quickbar. */
     #resetRuntime(): void {
         if (this.#container) this.#container.innerHTML = '';
-        this.#elements = undefined;
+        this.#cachedElements = undefined;
     }
 
     /** Create the child DOM structure for the quickbar and cache element references. */
@@ -88,7 +88,7 @@ export class HSQOLEventsQuickbar {
         lotusSpan.classList.add('hs-hidden');
 
         // Cache references for fast updates later
-        this.#elements = {
+        this.#cachedElements = {
             happyHourSpan,
             happyHourAmountSpan: happyHourAmountSpan,
             lotusSpan
@@ -101,11 +101,13 @@ export class HSQOLEventsQuickbar {
 
     /** Pull latest event data and update the quickbar DOM. */
     #updateDOM(): void {
-        if (!this.#elements) return;
+        if (!this.#cachedElements) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
         const eventData = gameDataAPI.getEventData();
         if (!eventData) return;
+
+        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.#cachedElements!;
 
         const happyHourEvent = eventData?.HAPPY_HOUR_BELL;
         const lotusEvent = eventData?.LOTUS_OF_REJUVENATION;
@@ -114,17 +116,27 @@ export class HSQOLEventsQuickbar {
         const hhTooltipText = this.#formatHappyHourTooltip(happyHourEvent, happyHourAmount);
         const lotusTooltipText = this.#formatLotusTooltip(lotusEvent);
 
-        this.#applyEventView(happyHourEvent, happyHourAmount, hhTooltipText, lotusEvent, lotusTooltipText);
+        happyHourSpan.title = hhTooltipText;
+        lotusSpan.title = lotusTooltipText;
+        happyHourAmountSpan.textContent = `${happyHourAmount}`;
+
+        happyHourSpan.classList.toggle('no-event', happyHourEvent?.ends?.length === 0);
+        happyHourSpan.classList.toggle('crazy-happy-hour', happyHourAmount > 4);
+        lotusSpan.classList.toggle('hs-hidden', lotusEvent?.ends?.length === 0);
 
         HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.#context);
     }
 
     #formatHappyHourTooltip(happyHourEvent: any, happyHourAmount: number): string {
         if (happyHourEvent?.ends && happyHourEvent.ends.length > 0) {
-            const hhEndsTimes = happyHourEvent.ends
-                .map((e: any) => new Date(e).toLocaleTimeString(undefined, { hour12: false }))
-                .join(', ');
-            return `${happyHourAmount} HH ending at: ${hhEndsTimes}`;
+            const maxDisplayed = 4;
+            const displayed = happyHourEvent.ends
+                .slice(0, maxDisplayed)
+                .map((e: any) => new Date(e).toLocaleTimeString(undefined, { hour12: false }));
+
+            const moreCount = happyHourEvent.ends.length - displayed.length;
+            const suffix = moreCount > 0 ? `, (+${moreCount}...)` : '';
+            return `${happyHourAmount} HH ending at: ${displayed.join(', ')}${suffix}`;
         }
         return 'No active HH';
     }
@@ -137,51 +149,10 @@ export class HSQOLEventsQuickbar {
         return 'No active Lotus';
     }
 
-    #setVisible(visible: boolean): void {
-        if (this.#container) {
-            if (visible) {
-                this.#container.classList.remove('hs-hidden');
-            } else {
-                this.#container.classList.add('hs-hidden');
-            }
-        }
-    }
-
-    #isConnected(): boolean {
-        const wsModule = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
-        if (!wsModule) return false;
-
-        const ws = wsModule.getWebSocket('consumable-event-socket');
-        if (!ws || !ws.socket) return false;
-
-        return ws.socket.readyState === WebSocket.OPEN;
-    }
-
-    #applyEventView(happyHourEvent: any, happyHourAmount: number, hhTooltipText: string, lotusEvent: any, lotusTooltipText: string): void {
-        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.#elements!;
-
-        happyHourSpan.title = hhTooltipText;
-        happyHourAmountSpan.textContent = `${happyHourAmount}`;
-        if (happyHourEvent?.ends?.length === 0) {
-            happyHourSpan.classList.add('no-event');
-        } else {
-            happyHourSpan.classList.remove('no-event');
-        }
-
-        lotusSpan.title = lotusTooltipText;
-        if (lotusEvent?.ends?.length === 0) {
-            lotusSpan.classList.add('hs-hidden');
-        } else {
-            lotusSpan.classList.remove('hs-hidden');
-        }
-
-        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.#context);
-    }
-
     /** Subscribe to game-data event changes and schedule DOM updates. */
     #setupSubscription(): void {
         if (this.#unsubscribeEventData) return;
-        if (!this.#elements) return;
+        if (!this.#cachedElements) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
 

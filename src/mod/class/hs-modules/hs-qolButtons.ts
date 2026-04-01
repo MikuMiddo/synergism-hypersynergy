@@ -17,6 +17,7 @@ import type { QUICKBAR_ID } from "./hs-quickbarManager";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSQOLAutomationQuickbar } from "./hs-qolButtonsAutomationQuickbar";
 import { HSQOLEventsQuickbar } from "./hs-qolButtonsEventsQuickbar";
+import { HSQOLCorruptionQuickbar } from "./hs-qolButtonsCorruptionQuickbar";
 
 /**
  *  Class: HSQOLButtons
@@ -31,6 +32,7 @@ export class HSQOLButtons extends HSModule {
 
     #automationQuickbarHandler: HSQOLAutomationQuickbar | null = null;
     #eventsQuickbarHandler: HSQOLEventsQuickbar | null = null;
+    #corruptionQuickbarHandler: HSQOLCorruptionQuickbar | null = null;
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -74,6 +76,7 @@ export class HSQOLButtons extends HSModule {
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
         this.injectAFKSwapperToggleButton();
+        this.enableCorruptionQuickbar();
     }
 
     public getEventsQuickbarSection(): HTMLElement {
@@ -665,6 +668,27 @@ export class HSQOLButtons extends HSModule {
         );
     }
 
+    /** Public wrapper to enable the Corruption Quickbar. */
+    public enableCorruptionQuickbar(): void {
+        if (!this.#corruptionQuickbarHandler) this.#corruptionQuickbarHandler = new HSQOLCorruptionQuickbar();
+        const handler = this.#corruptionQuickbarHandler;
+        this.#enableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.CORRUPTION,
+            () => ({
+                element: handler!.createSection(),
+                teardown: () => {
+                    HSLogger.debug('Corruption quickbar teardown invoked', this.context);
+                    try { handler!.teardown(); } catch (e) { HSLogger.log(`Error during corruption quickbar teardown: ${e}`, this.context); }
+                }
+            }),
+            (section) => {
+                handler!.setup(section as HTMLDivElement).catch((e) => {
+                    HSLogger.log(`Error during corruption quickbar setup: ${e}`, this.context);
+                });
+            }
+        );
+    }
+
     /** Public wrapper to disable the Automation Quickbar. */
     public disableAutomationQuickbar(): void {
         // Manager will call the stored teardown; just remove the section and drop handler reference.
@@ -676,6 +700,12 @@ export class HSQOLButtons extends HSModule {
     public disableEventsQuickbar(): void {
         this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.EVENTS);
         this.#eventsQuickbarHandler = null;
+    }
+
+    /** Public wrapper to disable the Corruption Quickbar. */
+    public disableCorruptionQuickbar(): void {
+        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.CORRUPTION);
+        this.#corruptionQuickbarHandler = null;
     }
 
     /**

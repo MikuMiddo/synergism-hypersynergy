@@ -36,6 +36,7 @@ export class HSAmbrosiaQuickbar {
                 groupWrapper.id = "hs-ambrosia-group-wrapper";
                 groupWrapper.style.display = "flex";
                 groupWrapper.style.flexDirection = "column";
+                groupWrapper.style.justifyContent = "flex-end";
                 quickbarsRow.appendChild(groupWrapper);
             }
             if (quickbarsRow.lastChild !== groupWrapper) {
@@ -94,6 +95,7 @@ export class HSAmbrosiaQuickbar {
             groupWrapper.id = "hs-ambrosia-group-wrapper";
             groupWrapper.style.display = "flex";
             groupWrapper.style.flexDirection = "column";
+            groupWrapper.style.justifyContent = "flex-end";
             quickbarsRow.appendChild(groupWrapper);
         }
 

@@ -1228,7 +1228,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     #isInAmbLoadout(loadout: HTMLButtonElement): boolean {
-        return !!loadout?.classList.contains('hs-ambrosia-active-slot');
+        return !!loadout?.classList.contains('hs-rainbow-border');
     }
 
     // ============================================================================
@@ -1507,7 +1507,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.#executeLastPushLoop();
         await this.#exitTranscBtn.click();
-        await HSUtils.sleep(1000);
+        await HSUtils.sleep(2000);
         await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
         await this.#autoChallengeButton.click();
         await this.#exitAscBtn.click();
@@ -1517,7 +1517,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async #executePushLoop(): Promise<void> {
         await this.#waitForCompletion(15, 0, 0, 0);
         await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
-        await HSUtils.sleep(3500);
+        await HSUtils.sleep(4500);
         await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(100);
         await this.#antSacrifice.click();
@@ -1526,7 +1526,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.#exitAscBtn.click();
         await this.#setAmbrosiaLoadout(this.#ambrosia_off);
-        await HSUtils.sleep(3500);
+        await HSUtils.sleep(4500);
         await this.#antSacrifice.click();
         await HSUtils.sleep(100);
         await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
@@ -1535,19 +1535,19 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async #executeLastPushLoop(): Promise<void> {
         await this.#waitForCompletion(15, 0, 0, 0);
         await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
-        await HSUtils.sleep(3500);
+        await HSUtils.sleep(4500);
         await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(100);
         await this.#antSacrifice.click();
         await HSUtils.sleep(100);
         await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
 
-        await this.#waitForCompletion(6, 150, 1000, 0);
-        await this.#waitForCompletion(1, 9001, 1000, 0);
-        await this.#waitForCompletion(2, 9001, 1000, 0);
-        await this.#waitForCompletion(3, 9001, 1000, 0);
-        await this.#waitForCompletion(4, 9001, 1000, 0);
-        await this.#waitForCompletion(5, 9001, 1000, 0);
+        await this.#waitForCompletion(6, 150,  1200, 0);
+        await this.#waitForCompletion(1, 9001, 1200, 0);
+        await this.#waitForCompletion(2, 9001, 1200, 0);
+        await this.#waitForCompletion(3, 9001, 1200, 0);
+        await this.#waitForCompletion(4, 9001, 1200, 0);
+        await this.#waitForCompletion(5, 9001, 1200, 0);
     }
 
     // ============================================================================
