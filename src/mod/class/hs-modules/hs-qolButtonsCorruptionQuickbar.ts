@@ -4,8 +4,7 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSCorruption, HSCorruptionLoadout } from "./hs-corruption";
-import { CorruptionLevels } from "../../types/data-types/hs-player-savedata";
+import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "./hs-corruption";
 
 const CORRUPTION_ICON_STORAGE_KEY = 'hs-corruption-loadout-icons';
 
@@ -20,7 +19,7 @@ export class HSQOLCorruptionQuickbar {
     #slotsWrapper: HTMLDivElement | null = null;
     #isSummaryVisible = true;
     #slots: HTMLButtonElement[] = [];
-    #loadouts: HSCorruptionLoadout[] = [];
+    #loadouts: HSCorruptionUserLoadout[] = [];
     #corruptionObserverUnsubscribe: (() => void) | null = null;
 
     #corruptionLoadoutIcons: Map<number, string> = new Map();
@@ -37,6 +36,11 @@ export class HSQOLCorruptionQuickbar {
     }
 
     public async setup(container: HTMLDivElement): Promise<void> {
+        if (this.#container) {
+            HSLogger.debug('HSQOLCorruptionQuickbar is already initialized; setup skipped.', this.#context);
+            return;
+        }
+
         this.#container = container;
         this.#reset();
 
@@ -78,16 +82,15 @@ export class HSQOLCorruptionQuickbar {
             return;
         }
 
-        await this.#cacheCorruptionElements();
+        await HSCorruption.cacheCorruptionElements();
         await this.#loadCorruptionLoadoutIconsFromStorage();
         await this.#buildSlots();
 
-        this.#corruptionObserverUnsubscribe = HSCorruption.observeCurrentCorruptions((current, next) => {
+        this.#corruptionObserverUnsubscribe = HSCorruption.observeCorruptions((current, next) => {
             this.#refreshActive(current, next);
         });
 
-        await HSCorruption.startCorruptionObservation();
-
+        await HSCorruption.startCorruptionObservationContainer('#corruptionLoadoutTable');
     }
 
     public teardown(): void {
@@ -112,20 +115,19 @@ export class HSQOLCorruptionQuickbar {
         this.#slots = [];
     }
 
-    async #cacheCorruptionElements(): Promise<void> {
-        if (!HSCorruption.cachedCurrent || !HSCorruption.cachedNext) {
-            await HSCorruption.cacheCorruptionElements();
-        }
-    }
-
     async #buildSlots(): Promise<void> {
         if (!this.#container) return;
+        if (this.#slots.length > 0) return;
+
+        await HSElementHooker.HookElement('#corruptionLoadouts');
 
         const loadouts = await HSCorruption.getUserLoadouts();
         if (!loadouts.length) {
             HSLogger.warn('No corruption loadouts found (#corruptionLoadouts tr)', this.#context);
             return;
         }
+
+        this.#loadouts = loadouts;
 
         loadouts.forEach((loadout, index) => {
             const slotName = loadout.name;
@@ -152,13 +154,14 @@ export class HSQOLCorruptionQuickbar {
                     this.#startPickupMode(index);
                     return;
                 }
-/*
+
                 if (loadButton) {
                     loadButton.click();
                     await HSUtils.sleep(50); // let game process
-                    this.#refreshActive();
+                    await HSCorruption.refreshLoadedCorruptions();
+                    const { current, next } = await HSCorruption.getBothLoadedCorruptions();
+                    this.#refreshActive(current, next);
                 }
-*/
             });
 
             slot.addEventListener('contextmenu', (event) => {
@@ -167,20 +170,11 @@ export class HSQOLCorruptionQuickbar {
                 this.#clearIconForSlot(index);
                 HSUI.Notify('Corruption slot icon cleared', { notificationType: 'default' });
             });
-/*
-            if (saveButton) {
-                saveButton.addEventListener('click', async () => {
-                    await HSUtils.sleep(60); // wait for values to propagate after save
-                    this.#updateLoadoutFromIndex(index);
-                    this.#refreshActive();
-                });
-            }
-*/           
+
             this.#slotsWrapper?.appendChild(slot);
             this.#slots.push(slot);
 
             this.#applySlotIconFromStore(slot);
-            this.#loadouts.push(loadout);
         });
     }
 
@@ -197,7 +191,7 @@ export class HSQOLCorruptionQuickbar {
         }
     }
 
-    #refreshActive(current: CorruptionLevels, next: CorruptionLevels): void {
+    #refreshActive(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
 
         if (!this.#container) return;
 
@@ -205,7 +199,7 @@ export class HSQOLCorruptionQuickbar {
 
         this.#slots.forEach((slot) => {
             slot.classList.remove('hs-rainbow-border');
-            slot.classList.remove('hs-corruption-next-slot');
+            slot.classList.remove('hs-silver-border');
         });
 
         let matchedCurrent = false;
@@ -219,7 +213,7 @@ export class HSQOLCorruptionQuickbar {
                 slot.classList.add('hs-rainbow-border');
                 matchedCurrent = true;
             } else if (HSCorruption.matches(loadout.levels, next)) {
-                slot.classList.add('hs-corruption-next-slot');
+                slot.classList.add('hs-silver-border');
                 matchedNext = true;
             }
         });
@@ -228,8 +222,8 @@ export class HSQOLCorruptionQuickbar {
         this.#container.classList.toggle('hs-corruption-next-unknown', !matchedNext);
     }
 
-    #displayCorruptionStrings(current: CorruptionLevels, next: CorruptionLevels): void {
-        const formatLevels = (levels: CorruptionLevels) =>
+    #displayCorruptionStrings(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
+        const formatLevels = (levels: HSCorruptionLevels) =>
             HSCorruption.corruptionNames
                 .map((name) => String(levels[name] ?? 0))
                 .join('/');

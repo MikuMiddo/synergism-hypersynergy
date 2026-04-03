@@ -121,7 +121,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     #exportBtnClone?: HTMLButtonElement;
 
     // DOM Elements - Corruptions
-    #corrCurrent: Record<string, HTMLElement | null> = {};
     #corrNext: Record<string, HTMLElement | null> = {};
     #corruptionPromptInput!: HTMLInputElement;
     #corruptionPromptOkBtn!: HTMLButtonElement;
@@ -223,10 +222,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
         this.#addCodeAllBtn = document.getElementById("addCodeAll") as HTMLButtonElement;
         this.#timeCodeBtn = document.getElementById("timeCode") as HTMLButtonElement;
-
+        
         const corrNames = ["viscosity", "drought", "deflation", "extinction", "illiteracy", "recession", "dilation", "hyperchallenge"];
         corrNames.forEach(name => {
-            this.#corrCurrent[name] = document.getElementById(`corrCurrent${name}`);
             this.#corrNext[name] = document.getElementById(`corrNext${name}`);
         });
     }

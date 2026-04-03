@@ -182,20 +182,6 @@
       "controlEnabledId": "hs-setting-add-time-auto-loadouts-btn"
     }
   },
-  "activeAmbrosiaLoadout": {
-    "settingName": "activeAmbrosiaLoadout",
-    "settingDescription": "Current active ambrosia loadout",
-    "settingHelpText": "This stores the current active ambrosia loadout (with <red>/<green> formatting).",
-    "settingType": "state",
-    "settingValue": "\u003cred\u003eUnknown\u003c/red\u003e",
-    "enabled": true,
-    "settingControl": {
-      "controlId": "hs-setting-active-ambrosia-loadout-value",
-      "controlType": "state",
-      "controlGroup": "ambrosia",
-      "controlPage": "ambrosia"
-    }
-  },
   "autoLoadoutAdd": {
     "settingName": "autoLoadoutAdd",
     "settingDescription": "ADD Loadout",
@@ -553,7 +539,7 @@
     "settingHelpText": "When enabled, the mod will automatically perform singularities.",
     "settingType": "boolean",
     "enabled": false,
-    "usesGameData": true,
+    "usesGameData": false,
     "settingAction": "startAutosingAction",
     "settingControl": {
       "controlType": "switch",

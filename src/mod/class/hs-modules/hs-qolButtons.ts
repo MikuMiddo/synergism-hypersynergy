@@ -76,7 +76,6 @@ export class HSQOLButtons extends HSModule {
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
         this.injectAFKSwapperToggleButton();
-        this.enableCorruptionQuickbar();
     }
 
     public getEventsQuickbarSection(): HTMLElement {

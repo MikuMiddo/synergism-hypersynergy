@@ -1,6 +1,4 @@
 import { AMBROSIA_ICON, AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
-import { HSSetting } from "../hs-core/settings/hs-setting";
-import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
@@ -38,63 +36,27 @@ export class HSAmbrosiaHelper {
 
     /** Normalize a saved/loadout string to a real AMBROSIA_LOADOUT_SLOT enum value. */
     static resolveAmbrosiaLoadout(value?: string | AMBROSIA_LOADOUT_SLOT | null): AMBROSIA_LOADOUT_SLOT | undefined {
-        // `activeAmbrosiaLoadout` setting may contain colored text or tags; remove them first.
         if (value === null || value === undefined) return undefined;
 
-        const raw = HSUtils.removeColorTags(String(value)).trim();
-        if (!raw) return undefined;
+        // Accept canonical and numeric formats, e.g. blueberryLoadout1, Loadout 1, 1.
+        const input = String(value);
+        const normalized = HSUtils.removeColorTags(input).trim();
 
-        return this.getSlotEnumBySlotId(raw);
+        // direct enum style
+        const direct = this.getSlotEnumBySlotId(normalized);
+        if (direct) return direct;
+
+        // plain number style
+        const indexMatch = normalized.match(/^(?:Loadout\s*)?(\d+)$/i);
+        if (indexMatch) {
+            return this.convertSettingLoadoutToSlot(indexMatch[1]);
+        }
+
+        return undefined;
     }
 
-    /** Format a user-visible active loadout status string. */
-    static formatActiveAmbrosiaLoadout(resolvedSlot?: AMBROSIA_LOADOUT_SLOT): string {
-        if (!resolvedSlot) {
-            return "<red>Unknown</red>";
-        }
-
-        const loadoutNumber = this.getLoadoutNumberFromSlot(resolvedSlot);
-        if (!loadoutNumber || loadoutNumber <= 0) {
-            return "<red>Unknown</red>";
-        }
-
-        return `<green>Loadout ${loadoutNumber}</green>`;
-    }
-
-    /** Mark current active ambrosia loadout as unknown and disable autoLoadout if enabled. */
-    static setActiveAmbrosiaLoadoutToUnknown(): void {
-        // Keep user-facing state deterministic when no valid active loadout is present.
-        const activeLoadoutSetting = HSSettings.getSetting('activeAmbrosiaLoadout') as HSSetting<string>;
-        if (activeLoadoutSetting) {
-            activeLoadoutSetting.setValue('<red>Unknown</red>');
-        } else {
-            HSLogger.debug('setActiveAmbrosiaLoadoutToUnknown - active Ambrosia loadout setting missing', this.#context);
-        }
-
-        // If auto switching is enabled, disable it until valid loadout state is restored.
-        const autoLoadoutSetting = HSSettings.getSetting('addTimeAutoLoadouts') as HSSetting<boolean>;
-        if (autoLoadoutSetting && autoLoadoutSetting.isEnabled()) {
-            autoLoadoutSetting.disable();
-            HSLogger.debug('Invalid current-active loadout value detected; autoLoadout disabled', this.#context);
-        }
-    }
-
-    /** Set and format the current active loadout in the settings. */
-    static setActiveLoadoutSetting(resolvedSlot: AMBROSIA_LOADOUT_SLOT | undefined): void {
-        if (!resolvedSlot) {
-            this.setActiveAmbrosiaLoadoutToUnknown();
-            return;
-        }
-
-        const activeLoadoutSetting = HSSettings.getSetting('activeAmbrosiaLoadout') as HSSetting<string>;
-        if (!activeLoadoutSetting) {
-            HSLogger.warn('setActiveLoadoutSetting - activeAmbrosiaLoadout setting missing', this.#context);
-            return;
-        }
-
-        const state = this.formatActiveAmbrosiaLoadout(resolvedSlot);
-        activeLoadoutSetting.setValue(state);
-    }
+    // no UI state formatting or setting persistence is performed by this helper anymore.
+    // HSAmbrosia now owns canonical active state and persistence directly.
 
     /** Convert loadout-setting string (e.g. "1") to a real slot enum. */
     static convertSettingLoadoutToSlot(loadoutNumber: string): AMBROSIA_LOADOUT_SLOT | undefined {

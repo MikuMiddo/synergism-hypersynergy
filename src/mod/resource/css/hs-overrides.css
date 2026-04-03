@@ -224,12 +224,7 @@
    box-shadow: 0 0 10px rgba(255, 255, 0, 0.8) !important;
 }
 
-.hs-corruption-next-slot {
-   border: 2px solid #006500;
-   box-shadow: 0 0 10px rgba(9, 100, 16, 0.689);
-}
-
-/* For Ambrosia and Corruption quickbars */
+/* Rainbow border for Ambrosia and Corruption quickbars */
 .hs-rainbow-border {
    --angle: 0deg;
    border: 2px solid transparent;
@@ -249,6 +244,27 @@
       #ff5e00
    ) 1;
    animation: hue-rotate 6s linear infinite;
+}
+
+.hs-silver-border {
+   --angle: 0deg;
+   border: 1.5px solid transparent;
+   border-image: conic-gradient(
+      from var(--angle),
+      #8c8c8c,
+      #b0b0b0,
+      #d0d0d0,
+      #e8e8e8,
+      #ffffff,
+      #e8e8e8,
+      #d0d0d0,
+      #b0b0b0,
+      #909090,
+      #6f6f6f,
+      #4a4a4a,
+      #8c8c8c
+   ) 1;
+   animation: hue-rotate 8s linear infinite;
 }
 
 @keyframes hue-rotate {
