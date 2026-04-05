@@ -111,6 +111,7 @@ export class HSAmbrosiaQuickbar {
         if (loadoutContainer) {
             const clone = loadoutContainer.cloneNode(true) as HTMLElement;
             clone.id = HSGlobal.HSAmbrosia.quickBarId;
+            clone.className = 'hs-quickbar-slots-wrapper';
             clone.style.display = "none";
 
             const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;
@@ -157,6 +158,7 @@ export class HSAmbrosiaQuickbar {
 
         const clone = loadoutContainer.cloneNode(true) as HTMLElement;
         clone.id = HSGlobal.HSAmbrosia.quickBarId;
+        clone.className = 'hs-quickbar-slots-wrapper';
         clone.style.display = "";
 
         const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;

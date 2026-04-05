@@ -81,7 +81,6 @@ export class HSQOLButtons extends HSModule {
     public getEventsQuickbarSection(): HTMLElement {
         const container = document.createElement('div');
         container.id = 'eventsQuickBar';
-        container.className = 'hs-events-quickbar';
         return container;
     }
     

@@ -83,7 +83,6 @@ export class HSQuickbarManager {
 
     /** Register a quickbar section factory for the given id. */
     public registerSection(id: QUICKBAR_ID, factory: QuickbarSectionFactory): void {
-        HSLogger.debug(`registerSection(${id}) called`, this.#context);
         this.#sectionFactories.set(id, factory);
         if (!this.#sectionOrder.includes(id)) {
             this.#sectionOrder.push(id);
@@ -99,7 +98,6 @@ export class HSQuickbarManager {
    
     /** Inject or update the DOM for a single quickbar section. */
     public injectSection(id: QUICKBAR_ID, parent?: HTMLElement): void {
-        HSLogger.debug(`injectSection(${id}) called`, this.#context);
         const row = parent || HSQuickbarManager.ensureQuickbarsRow();
         if (!row) return;
 
@@ -119,7 +117,7 @@ export class HSQuickbarManager {
         // Create the new element
         const factory = this.#sectionFactories.get(id);
         if (!factory) return;
-        HSLogger.debug(`injecting section ${id}`, this.#context);
+        // HSLogger.debug(`injecting section ${id}`, this.#context);
         const raw = factory();
         if (!raw || !raw.element) return;
         const el = raw.element;
@@ -177,7 +175,6 @@ export class HSQuickbarManager {
 
     /** Register a callback to run when a section is injected (calls immediately if already injected). */
     public onSectionInjected(id: QUICKBAR_ID, callback: () => void): void {
-        HSLogger.debug(`onSectionInjected(${id}) called`, this.#context);
         if (this.#sectionElements.has(id)) {
             HSLogger.debug(`section ${id} already injected, calling callback immediately`, this.#context);
             callback();
@@ -216,7 +213,7 @@ export class HSQuickbarManager {
     }
 
     /** Register and enable a quickbar: registers the factory, injects the section, and runs setup callback. */
-    public enableQuickbar(
+    public async enableQuickbar(
         id: QUICKBAR_ID,
         factory: QuickbarSectionFactory,
         setupCallback?: (section: HTMLElement) => void,
@@ -230,14 +227,13 @@ export class HSQuickbarManager {
             this.#teardownCallbacks.delete(id);
         }
         this.injectSection(id);
-        return this.whenSectionInjected(id).then(() => {
-            const section = this.getSection(id)!;
-            if (section && setupCallback) {
-                try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
-            }
-            HSLogger.debug(`Quickbar ${id} enabled`, this.#context);
-            return section;
-        });
+        await this.whenSectionInjected(id);
+        const section = this.getSection(id)!;
+        if (section && setupCallback) {
+            try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
+        }
+        HSLogger.debug(`Quickbar ${id} enabled`, this.#context);
+        return section;
     }
 
     /** Run an optional teardown callback and disable the quickbar by removing its section. */
@@ -253,7 +249,6 @@ export class HSQuickbarManager {
 
     /** Remove a section by ID and run any stored teardown callback. */
     public removeSection(id: QUICKBAR_ID): void {
-        HSLogger.debug(`removeSection(${id}) called`, this.#context);
         // Call stored teardown callback if any
         const td = this.#teardownCallbacks.get(id);
         if (td) {

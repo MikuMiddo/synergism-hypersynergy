@@ -202,7 +202,7 @@ export class HSGameData extends HSModule {
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
-        HSLogger.debug(`Refreshing fetched data`, this.context);
+        // HSLogger.debug(`Refreshing fetched data`, this.context);
 
         try {
             const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
@@ -944,7 +944,7 @@ export class HSGameData extends HSModule {
      * @returns void
      */
     #refreshCampaignTokens() {
-        HSLogger.debug(`Refreshing campaign data`, this.context);
+        // HSLogger.debug(`Refreshing campaign data`, this.context);
 
         if (!this.#campaignTokenElement) {
             const el = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;

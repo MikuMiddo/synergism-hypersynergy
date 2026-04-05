@@ -9,6 +9,8 @@ import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSGlobal } from "./hs-core/hs-global";
 import { HSStorage } from "./hs-core/hs-storage";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
+import quickbarsCSS from "inline:../resource/css/hs-quickbars.css";
+import strategyEditionCSS from "inline:../resource/css/hs-panel-strategy-edition.css";
 import { HSInputType, HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
 import { HSUtils } from "./hs-utils/hs-utils";
@@ -105,6 +107,8 @@ export class Hypersynergism {
 
     #injectStyleOverrides() {
         HSUI.injectStyle(overrideCSS, 'hs-override-css');
+        HSUI.injectStyle(strategyEditionCSS, 'hs-panel-strategy-edition-css');
+        HSUI.injectStyle(quickbarsCSS, 'hs-quickbars-css');
     }
 
     #buildToolsTab(hsui: HSUI) {

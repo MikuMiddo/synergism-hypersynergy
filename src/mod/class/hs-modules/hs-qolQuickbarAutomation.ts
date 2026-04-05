@@ -53,8 +53,8 @@ type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQ
  */
 export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
     protected readonly context = 'HSQOLAutomationQuickbar';
-    protected readonly sectionId = 'automationQuickBar';
-    protected readonly sectionClass = 'hs-automation-quickbar';
+    protected readonly sectionIdInternal = 'automationQuickBar';
+    protected readonly sectionIdCss = 'automationQuickBar';
 
     #automationQuickBarContainer: HTMLDivElement | null = null;
     #automationSummaryWrapper: HTMLDivElement | null = null;
@@ -832,7 +832,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 return `C${challenge}`;
             }
         }
-        return 'C-';
+        return 'C∅';
     }
 
     #updateAutomationSummaryText(): void {

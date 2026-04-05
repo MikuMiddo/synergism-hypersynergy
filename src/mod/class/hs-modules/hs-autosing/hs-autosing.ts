@@ -1202,6 +1202,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             const intervalId = window.setInterval(() => {
                 attempt++;
                 this.#coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
+                
+                // Exposed player use
+                if (HSGlobal.exposedPlayer && HSGlobal.exposedPlayer.firstOwnedCoin === 0) {
+                    HSLogger.debug(`antiBuyCoinBug: Detected firstOwnedCoin is 0, incrementing to prevent bug.`, this.context);
+                    HSGlobal.exposedPlayer.firstOwnedCoin++;
+                }
 
                 if (attempt >= repeatCount) {
                     window.clearInterval(intervalId);
@@ -1244,7 +1250,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
         } else {
             if (!this.#hasWarnedMissingStageFunc) {
-                HSLogger.debug("Performance Warning: 'synergismStage' function not exposed.", this.context);
+                HSLogger.warn("Performance Warning: 'synergismStage' function not exposed.", this.context);
                 this.#hasWarnedMissingStageFunc = true;
             }
         }

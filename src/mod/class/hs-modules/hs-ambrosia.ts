@@ -19,7 +19,7 @@ import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
-import minibarCSS from "inline:../../resource/css/module/hs-ambrosia.css";
+import minibarCSS from "inline:../../resource/css/module/hs-ambrosia-minibars.css";
 
 /**
  * Class: HSAmbrosia
@@ -402,6 +402,7 @@ export class HSAmbrosia extends HSModule
         if (!groupWrapper) {
             groupWrapper = document.createElement('div');
             groupWrapper.id = 'hs-ambrosia-group-wrapper';
+            groupWrapper.className = 'hs-quickbar';
             groupWrapper.style.display = 'flex';
             groupWrapper.style.flexDirection = 'column';
             groupWrapper.style.justifyContent = "flex-end";
@@ -470,7 +471,7 @@ export class HSAmbrosia extends HSModule
         const containers = [
             this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`),
             document.querySelector('#bbLoadoutContainer'),
-            document.querySelector('#hs-ambrosia-quick-loadout-container') // Just in case
+            document.querySelector('#hs-ambrosia-slots-wrapper') // Just in case
         ];
 
         containers.forEach(container => {
@@ -849,16 +850,25 @@ export class HSAmbrosia extends HSModule
         const storageModule = HSModuleManager.getModule('HSStorage') as HSStorage;
 
         if (storageModule) {
-            const data = storageModule.getData(HSGlobal.HSAmbrosia.storageKey) as string;
+            const data = storageModule.getData(HSGlobal.HSAmbrosia.storageKey);
 
             if (!data) {
                 HSLogger.warn(`loadState - No data found`, this.context);
                 return;
             }
 
-            try {
-                const parsedData = JSON.parse(data);
+            let parsedData: any = data;
+            if (typeof data === 'string') {
+                try {
+                    parsedData = JSON.parse(data);
+                } catch {
+                    // TEMPORARY:Legacy raw string format may be stored directly as the active loadout value.
+                    this.activeLoadout = HSAmbrosiaHelper.resolveAmbrosiaLoadout(data);
+                    return;
+                }
+            }
 
+            try {
                 // Backwards-compatible format support:
                 // - Old versions stored a plain array of [slot, icon] pairs
                 // - New versions store {loadoutState, activeLoadout}
@@ -882,7 +892,6 @@ export class HSAmbrosia extends HSModule
         } else {
             HSLogger.warn(`loadState - Could not find storage module`, this.context);
         }
-
     }
 
 

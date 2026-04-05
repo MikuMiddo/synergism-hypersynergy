@@ -33,9 +33,9 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- Release check configuration ---
     static Release = {
-        githubOwner: 'Ferlieloi',
+        githubOwner: 'Ferlieloi',   // Can be replaced by an empty string if you prefer
         isLatestVersion: true,
-        checkIntervalMs: 900000    // 15min
+        checkIntervalMs: 900000     // 15min
     }
 
     // --- GENERAL ---
@@ -45,6 +45,7 @@ export const HSGlobal: IHSGlobal = class {
         isModFullyLoaded: false,
         isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
+        // Wiki needs to be cloned !
         get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
         get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
         get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
@@ -135,7 +136,7 @@ export const HSGlobal: IHSGlobal = class {
         gameDataCheckBlacklist: [
             'useGameData',
             'stopSniffOnError',
-            // These three settings auto-enable GDS when toggled on,
+            // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
             'ambrosiaIdleSwap',
             'ambrosiaMinibars'
@@ -244,8 +245,12 @@ export const HSGlobal: IHSGlobal = class {
     // HSAmbrosia
     static HSAmbrosia = {
         storageKey: 'ambrosia-loadouts',
-        quickBarId: 'hs-ambrosia-quick-loadout-container',
+        quickBarId: 'hs-ambrosia-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
+
+        // Almost all of this below could be removed if I implement the same image-picking logic
+        // as the corruption quickbar (Alt+Click a slot, then click on any image to choose it)
+        // It would also avoid setting up drag & drop...
         ambrosiaLoadoutIcons: new Map<AMBROSIA_ICON, HSAmbrosiaLoadoutIcon>([
             // First set
             [AMBROSIA_ICON.TUTORIAL, {
@@ -514,6 +519,29 @@ export const HSGlobal: IHSGlobal = class {
         redBarProgressTextId: 'hs-red-progress-text',
         barWrapperId: 'hs-minibars-wrapper',
     }
+
+    /*
+    // HSCorruptionQuickbar
+    static HSCorruptionQuickbar = {
+        storageKey: 'corruption-loadouts',
+        quickBarId: 'hs-corruption-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-corruption-quickbar',
+        corruptionLoadoutIcons: new Map<string, HSAmbrosiaLoadoutIcon>(),
+    }
+
+    // HSQOLAutomationQuickbar
+    static HSQOLAutomationQuickbar = {
+        quickBarId: 'hs-automation-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-automation-quickbar',
+        automationLoadoutIcons: new Map<string, HSAmbrosiaLoadoutIcon>(),
+    }
+
+    // HSQOLEventsQuickbar
+    static HSQOLEventsQuickbar = {
+        quickBarId: 'hs-events-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-events-quickbar',
+    }
+    */
 
     // HSGameState
     static HSGameState = {

@@ -260,10 +260,10 @@ export class HSUI extends HSModule {
         quickbarsSubmenu.style.display = 'none';
 
         // Helper to create submenu toggles
-        function createQuickbarToggle(label: string, btnId: string): HTMLElement {
+        function createQuickbarToggle(label: string, btnId: string, dataType: string): HTMLElement {
             const btn = document.createElement('button');
             btn.innerHTML = label;
-            btn.setAttribute('data-type', btnId);
+            btn.setAttribute('data-type', dataType);
             btn.addEventListener('click', () => {
                 const toggleBtn = document.getElementById(btnId) as HTMLElement;
                 if (toggleBtn) {
@@ -274,11 +274,11 @@ export class HSUI extends HSModule {
             return btn;
         }
 
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Ambrosia', 'hs-setting-qol-ambrosia-quickbar-btn'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Amb minibars', 'hs-setting-ambrosia-minibar-btn'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Corruption', 'hs-setting-qol-enable-corruption-quickbar-btn'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Automation', 'hs-setting-qol-enable-syn-ui-btn'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Events', 'hs-setting-qol-enable-events-quickbar-btn'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Ambrosia', 'hs-setting-qol-ambrosia-quickbar-btn', 'ambrosia'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Amb minibars', 'hs-setting-ambrosia-minibar-btn', 'amb-minibars'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Corruption', 'hs-setting-qol-enable-corruption-quickbar-btn', 'corruption'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Automation', 'hs-setting-qol-enable-syn-ui-btn', 'automation'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Events', 'hs-setting-qol-enable-events-quickbar-btn', 'events'));
 
         // Add click handler for bulk toggle logic
         quickbarsBtn.addEventListener('click', (e) => {
@@ -328,7 +328,7 @@ export class HSUI extends HSModule {
             <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>
             <span>Amb Heater Export</span>
         `;
-        heaterBtn.setAttribute('data-type', 'ambrosia-heater');
+        heaterBtn.setAttribute('data-type', 'amb-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
             if (heaterExportBtn) {

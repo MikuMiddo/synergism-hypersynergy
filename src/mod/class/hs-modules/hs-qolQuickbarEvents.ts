@@ -11,16 +11,12 @@ import { HSWebSocket } from "../hs-core/hs-websocket";
  *     Create and manage a small quickbar that displays time-limited event indicators
  *     (e.g. Happy Hour, Lotus of Rejuvenation) in the header quickbars row.
  *     Subscribe to `HSGameDataAPI` for updates and refresh the DOM accordingly.
- *
- * Lifecycle:
- * - `createSection()` returns a container element for injection.
- * - `setup()` builds child DOM and subscribes to updates.
- * - `teardown()` unsubscribes and clears runtime state.
+ *     Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
  */
 export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
     protected readonly context = 'HSQOLEventsQuickbar';
-    protected readonly sectionId = 'eventsQuickBar';
-    protected readonly sectionClass = 'hs-events-quickbar';
+    protected readonly sectionIdInternal = 'eventsQuickBar';
+    protected readonly sectionIdCss = 'eventsQuickBar';
 
     #cachedElements?: {
         happyHourSpan: HTMLSpanElement;

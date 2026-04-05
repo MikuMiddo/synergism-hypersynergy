@@ -17,8 +17,8 @@ import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
  */
 export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     protected readonly context = 'HSQOLCorruptionQuickbar';
-    protected readonly sectionId = 'corruptionQuickBar';
-    protected readonly sectionClass = 'hs-corruption-quickbar';
+    protected readonly sectionIdInternal = 'corruptionQuickBar';
+    protected readonly sectionIdCss = 'corruptionQuickBar';
 
     #corruptionSummaryWrapper: HTMLDivElement | null = null;
     #currentCorruptionsTextEl: HTMLDivElement | null = null;
@@ -66,7 +66,8 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#corruptionSummaryWrapper.appendChild(this.#nextCorruptionTextEl);
 
         this.#slotsWrapper = document.createElement('div');
-        this.#slotsWrapper.className = 'hs-corruption-slots-wrapper';
+        this.#slotsWrapper.id = 'hs-corruption-slots-wrapper';
+        this.#slotsWrapper.className = 'hs-quickbar-slots-wrapper';
 
         const infobox = document.createElement('div');
         infobox.id = 'hs-corruption-infobox';

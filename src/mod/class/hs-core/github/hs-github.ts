@@ -55,7 +55,7 @@ export class HSGithub {
             }
             const ghJson = await ghResp.json();
             if (Array.isArray(ghJson) && ghJson.length > 0 && ghJson[0].name) {
-                // HSLogger.debug(`Latest tag from GitHub API: ${ghJson[0].name}`, HSGithub.#context);
+                HSLogger.debug(`Latest tag from GitHub API: ${ghJson[0].name}`, HSGithub.#context);
                 return ghJson[0].name;
             }
             return null;
@@ -90,7 +90,7 @@ export class HSGithub {
         const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement | null;
 
         if (modIcon && modPanelHead) {
-            modIcon.classList.add('hs-rainbowBorder');
+            modIcon.classList.add('hs-rainbow-border');
             if (!modPanelHead.querySelector('#hs-panel-new-ver')) {
                 modPanelHead.innerHTML += `: <span id="hs-panel-new-ver">New version available!</span>`;
             }
