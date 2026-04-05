@@ -5259,7 +5259,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         val += Math.floor(data.lifetimeAmbrosia / 500)
 
         const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions
-        const acceleratorMult = 1 - 0.004 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
+        const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
 
         val *= acceleratorMult;
         val = Math.ceil(val);
@@ -5290,7 +5290,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         if (cached !== undefined) return cached;
 
-        const redBarRequirementMultiplier = 1 - (0.01 * data.singularityChallenges.limitedTime.completions);
+        const redBarRequirementMultiplier = 1 - (0.02 * data.singularityChallenges.limitedTime.completions);
 
         let val = timePerRedAmbrosia;
         val += 200 * data.lifetimeRedAmbrosia
