@@ -26,7 +26,7 @@ export class HSGithub {
             return true;
         }
 
-        const isLatest = (HSGithub.currentTag >= latestTag);
+        const isLatest = HSGithub.#compareVersionTags(HSGithub.currentTag, latestTag) >= 0;
         HSGlobal.Release.isLatestVersion = isLatest;
 
         if (isLatest) {
@@ -63,6 +63,65 @@ export class HSGithub {
             HSLogger.debug(`GitHub API request threw an error: ${err}`, HSGithub.#context);
             return null;
         }
+    }
+
+    static #parseVersionTag(tag: string): { numbers: number[]; prerelease: Array<string | number> | null } {
+        const normalized = tag.startsWith('v') ? tag.slice(1) : tag;
+        const [version, prerelease] = normalized.split('-', 2);
+        const numbers = version.split('.').map((segment) => Number(segment));
+        const parsedPrerelease = prerelease ? prerelease.split('.').flatMap((part) => {
+            const matches = part.match(/([0-9]+|[^0-9]+)/g);
+            return matches ? matches.map((chunk) => /^[0-9]+$/.test(chunk) ? Number(chunk) : chunk) : [part];
+        }) : null;
+        return { numbers, prerelease: parsedPrerelease };
+    }
+
+    static #compareVersionTags(a: string, b: string): number {
+        const left = HSGithub.#parseVersionTag(a);
+        const right = HSGithub.#parseVersionTag(b);
+
+        const maxLen = Math.max(left.numbers.length, right.numbers.length);
+        for (let i = 0; i < maxLen; i += 1) {
+            const leftNum = left.numbers[i] ?? 0;
+            const rightNum = right.numbers[i] ?? 0;
+            if (leftNum !== rightNum) {
+                return leftNum < rightNum ? -1 : 1;
+            }
+        }
+
+        if (left.prerelease === right.prerelease) {
+            return 0;
+        }
+
+        if (left.prerelease === null) {
+            return 1;
+        }
+        if (right.prerelease === null) {
+            return -1;
+        }
+
+        const prereleaseLen = Math.max(left.prerelease.length, right.prerelease.length);
+        for (let i = 0; i < prereleaseLen; i += 1) {
+            const leftId = left.prerelease[i];
+            const rightId = right.prerelease[i];
+
+            if (leftId === undefined) return -1;
+            if (rightId === undefined) return 1;
+            if (leftId === rightId) continue;
+
+            if (typeof leftId === 'number' && typeof rightId === 'number') {
+                return leftId < rightId ? -1 : 1;
+            }
+            if (typeof leftId === 'number') {
+                return -1;
+            }
+            if (typeof rightId === 'number') {
+                return 1;
+            }
+            return leftId < rightId ? -1 : 1;
+        }
+
+        return 0;
     }
 
     static startVersionPolling(intervalMs: number = HSGlobal.Release.checkIntervalMs): void {
