@@ -63,6 +63,7 @@
         "size": "8"
       },
       "selectOptions": [
+        { "text": "(none)", "value": "" },
         { "text": "Buildings", "value": "buildingstab" },
         { "text": "Upgrades", "value": "upgradestab" },
         { "text": "Achievements", "value": "achievementstab" },
@@ -1264,20 +1265,6 @@
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
     }
   },
-  "enableEventsQuickBar": {
-    "settingName": "enableEventsQuickBar",
-    "settingDescription": "Events quick bar",
-    "settingHelpText": "When enabled, shows HH/Lotus in the header during events.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "enableEventsQuickBarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
-    }
-  },
   "enableCorruptionQuickBar": {
     "settingName": "enableCorruptionQuickBar",
     "settingDescription": "Corruption quick bar",
@@ -1290,6 +1277,20 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-enable-corruption-quickbar-btn"
+    }
+  },
+  "enableEventsQuickBar": {
+    "settingName": "enableEventsQuickBar",
+    "settingDescription": "Events quick bar",
+    "settingHelpText": "When enabled, shows HH/Lotus in the header during events.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableEventsQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
     }
   },
   "hideMaxedGQUpgrades": {

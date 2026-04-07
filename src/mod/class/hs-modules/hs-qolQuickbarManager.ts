@@ -117,7 +117,6 @@ export class HSQuickbarManager {
         // Create the new element
         const factory = this.#sectionFactories.get(id);
         if (!factory) return;
-        // HSLogger.debug(`injecting section ${id}`, this.#context);
         const raw = factory();
         if (!raw || !raw.element) return;
         const el = raw.element;
@@ -208,7 +207,6 @@ export class HSQuickbarManager {
 
     /** Get the DOM element for a registered section (after injection). */
     public getSection(id: QUICKBAR_ID): HTMLElement | undefined {
-        HSLogger.debug(`getSection(${id}) called`, this.#context);
         return this.#sectionElements.get(id);
     }
 

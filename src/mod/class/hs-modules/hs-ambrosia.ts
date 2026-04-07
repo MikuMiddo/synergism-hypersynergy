@@ -14,6 +14,7 @@ import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSelectStringSetting, HSSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
+import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSStorage } from "../hs-core/hs-storage";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -49,13 +50,13 @@ export class HSAmbrosia extends HSModule
     #_delegateAddHandler?: (e: Event) => Promise<void>;
     #_delegateTimeHandler?: (e: Event) => Promise<void>;
 
+    #quickbarCSSId = 'hs-ambrosia-quickbar-css';
     #quickbarCSS = `
         #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
             filter: brightness(150%);
         }
     `;
 
-    #quickbarCSSId = 'hs-ambrosia-quickbar-css';
     #idleLoadoutCSS = `
         #hs-ambrosia-loadout-idle-swap-indicator {
             margin-bottom: 10px;
@@ -126,7 +127,7 @@ export class HSAmbrosia extends HSModule
         this.#setupLoadoutContainerEvents();
 
         this.isInitialized = true;
-        HSSettings.refreshAmbrosiaLoadoutDropdowns();
+        HSSettingsUI.refreshAmbrosiaLoadoutDropdowns();
     }
 
     async #initializeDomRefs() {

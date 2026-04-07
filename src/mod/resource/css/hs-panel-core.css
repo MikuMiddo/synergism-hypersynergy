@@ -62,7 +62,7 @@
     width: 500px;
     height: 400px;
     position: absolute;
-    top: 250px;
+    top: 50px;
     left: 10px;
     z-index: 7000;
 
@@ -366,15 +366,11 @@
     vertical-align: middle;
 }
 
+#hs-quick-access-menu button[data-type="autosing"] > span:first-child { color: green; }
+
 #hs-quick-access-menu button[data-type="quickbars"]:hover   { background: rgba(188, 189, 188, 0.25); }
 #hs-quick-access-menu button[data-type="autosing"]:hover    { background: rgba(76, 175, 80, 0.25); }
 #hs-quick-access-menu button[data-type="amb-heater"]:hover  { background: rgba(255, 152, 0, 0.25); }
-
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="ambrosia"]:hover      { background: rgba(15, 41, 120, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="amb-minibars"]:hover  { background: linear-gradient(to right, rgba(15, 41, 120, 0.25), rgba(105, 12, 12, 0.25)); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="corruption"]:hover    { background: rgba(159, 16, 16, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="automation"]:hover    { background: rgba(11, 92, 11, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="events"]:hover        { background: rgba(149, 117, 1, 0.25); }
 
 #hs-quickbars-submenu {
     display: none;
@@ -528,9 +524,35 @@
     padding-left: 10px;
 }
 
+.hs-panel-grid-2col {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+    column-gap: 5px;
+    row-gap: 10px;
+}
+
+.hs-panel-grid-full-span {
+    grid-column: span 2;
+}
+
+.hs-panel-grid-section-header {
+    border-bottom: 1px solid limegreen;
+    grid-column: span 2;
+    margin-bottom: 15px;
+}
+
 .hs-panel-setting-block-text-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
     grid-column: 1 / span 2;
     box-sizing: border-box;
+}
+
+.hs-panel-setting-block-text {
+    margin: 0;
 }
 
 .hs-panel-setting-block-text:hover {
@@ -553,17 +575,18 @@
 
 .hs-panel-setting-block-num-input {
     display: block;
+    width: 100%;
     height: 30px;
     border: 1px solid green;
-    grid-column: 1 / 2;
     box-sizing: border-box;
 }
 
 .hs-panel-setting-block-select-input {
     display: block;
+    width: 100%;
+    min-width: 0;
     height: 30px;
     border: 1px solid green;
-    grid-column: 1 / 2;
     box-sizing: border-box;
     min-height: 20px;
     color: white;
@@ -573,6 +596,11 @@
 
 .hs-panel-setting-block-select-input[multiple] {
     height: 80px;
+}
+
+.hs-panel-setting-block-select-input[multiple] option:checked {
+    background-color: green;
+    color: white;
 }
 
 .hs-panel-setting-block-select-input:hover {
@@ -587,13 +615,20 @@
     width: 30px;
     border: 1px solid green;
     display: block;
-    grid-column: 2 / 3;
     height: 30px;
     box-sizing: border-box;
 }
 
-.hs-panel-settings-block-btn-standalone {
-    grid-column: 1 / 1;
+.hs-panel-setting-block-input-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+    grid-column: 1 / span 2;
+}
+
+.hs-panel-btn-auto-width {
+    width: auto;
 }
 
 .hs-panel-setting-block-gamedata-icon {
@@ -686,6 +721,8 @@
     margin: 0px 2px 0px 2px;
     border-radius: 0px;
     font-size: 11pt;
+    border: 1px solid var(--hs-panel-subtab-border-color, gray);
+    --hs-panel-subtab-border-color: gray;
 }
 
 .hs-panel-subtab:hover {

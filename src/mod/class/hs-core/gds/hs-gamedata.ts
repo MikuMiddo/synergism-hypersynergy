@@ -10,6 +10,7 @@ import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
+import { HSSettingsUI } from "../settings/hs-settings-ui";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
@@ -261,7 +262,7 @@ export class HSGameData extends HSModule {
 
         if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
             // There's probably a better place to put this...
-            HSSettings.updateStrategyDropdownList();
+            HSSettingsUI.updateStrategyDropdownList();
             const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
             if (ambrosiaModule) {
                 ambrosiaModule.performInitialActiveLoadoutMatch(this.#saveData);

@@ -32,7 +32,8 @@ export class HSUtils {
 
     static async sleepUntilElapsed(
         prevTime: number,
-        delayMs: number
+        delayMs: number,
+        context?: string
     ): Promise<void> {
         if (delayMs <= 0) return;
 
@@ -42,10 +43,10 @@ export class HSUtils {
         if (remaining > 0) {
             await Promise.all([
                 HSUtils.sleep(remaining),
-                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, HSUtils.#context),
+                HSLogger.debug(`    Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, context ?? HSUtils.#context),
             ]);
         } else {
-            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, HSUtils.#context);
+            HSLogger.debug(`    No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, context ?? HSUtils.#context);
         }
     }
 
