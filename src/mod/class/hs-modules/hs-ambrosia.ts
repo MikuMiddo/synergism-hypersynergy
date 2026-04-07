@@ -50,13 +50,13 @@ export class HSAmbrosia extends HSModule
     #_delegateAddHandler?: (e: Event) => Promise<void>;
     #_delegateTimeHandler?: (e: Event) => Promise<void>;
 
+    #quickbarCSSId = 'hs-ambrosia-quickbar-css';
     #quickbarCSS = `
         #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
             filter: brightness(150%);
         }
     `;
 
-    #quickbarCSSId = 'hs-ambrosia-quickbar-css';
     #idleLoadoutCSS = `
         #hs-ambrosia-loadout-idle-swap-indicator {
             margin-bottom: 10px;

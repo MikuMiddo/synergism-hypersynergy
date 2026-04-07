@@ -366,15 +366,11 @@
     vertical-align: middle;
 }
 
+#hs-quick-access-menu button[data-type="autosing"] > span:first-child { color: green; }
+
 #hs-quick-access-menu button[data-type="quickbars"]:hover   { background: rgba(188, 189, 188, 0.25); }
 #hs-quick-access-menu button[data-type="autosing"]:hover    { background: rgba(76, 175, 80, 0.25); }
 #hs-quick-access-menu button[data-type="amb-heater"]:hover  { background: rgba(255, 152, 0, 0.25); }
-
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="ambrosia"]:hover      { background: rgba(15, 41, 120, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="amb-minibars"]:hover  { background: linear-gradient(to right, rgba(15, 41, 120, 0.25), rgba(105, 12, 12, 0.25)); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="corruption"]:hover    { background: rgba(159, 16, 16, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="automation"]:hover    { background: rgba(11, 92, 11, 0.25); }
-#hs-quick-access-menu #hs-quickbars-submenu button[data-type="events"]:hover        { background: rgba(149, 117, 1, 0.25); }
 
 #hs-quickbars-submenu {
     display: none;

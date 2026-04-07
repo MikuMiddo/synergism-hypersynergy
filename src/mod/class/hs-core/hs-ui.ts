@@ -43,6 +43,7 @@ export class HSUI extends HSModule {
     #logCopyBtn?: HTMLButtonElement;
 
     static #modPanelOpen = false;
+    static #logTabActive = false;
 
     #activeModals: Set<HTMLDivElement> = new Set();
     #modalParents: Map<string, string> = new Map();
@@ -177,6 +178,7 @@ export class HSUI extends HSModule {
             if (HSUI.#modPanelOpen && this.#uiPanel) {
                 await this.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
+                HSUI.#logTabActive = false;
                 this.#uiPanel.classList.add('hs-panel-closed');
             }
         });
@@ -233,7 +235,12 @@ export class HSUI extends HSModule {
             ? 'hs-panel-body-open-flex'
             : 'hs-panel-body-open-block');
 
-        if (tabId === 1) HSLogger.scrollToBottom();
+        HSUI.#logTabActive = tabId === 1;
+
+        if (HSUI.#logTabActive) {
+            HSLogger.flushPendingLogs();
+            HSLogger.scrollToBottom();
+        }
     }
 
     #setupPanelToggle(): void {
@@ -247,12 +254,19 @@ export class HSUI extends HSModule {
             if (HSUI.#modPanelOpen && this.#uiPanel) {
                 await this.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
+                HSUI.#logTabActive = false;
                 this.#uiPanel.classList.add('hs-panel-closed');
             } else if (this.#uiPanel) {
                 HSUI.#modPanelOpen = true;
+                const selectedTab = document.querySelector<HTMLDivElement>('.hs-panel-tab.hs-tab-selected');
+                HSUI.#logTabActive = selectedTab?.dataset.tab === '1';
+
                 this.#uiPanel.style.opacity = '0';
                 this.#uiPanel.classList.remove('hs-panel-closed');
 
+                if (HSUI.#logTabActive) {
+                    HSLogger.flushPendingLogs();
+                }
                 HSLogger.scrollToBottom();
                 await this.#uiPanel.transition({ opacity: 0.92 });
             }
@@ -421,6 +435,10 @@ export class HSUI extends HSModule {
 
     static isModPanelOpen() {
         return HSUI.#modPanelOpen;
+    }
+
+    static isLogTabActive() {
+        return HSUI.#logTabActive;
     }
 
     // Makes element draggable with mouse

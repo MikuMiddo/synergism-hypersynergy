@@ -74,7 +74,6 @@ export class HSAmbrosiaQuickbar {
                 quickbar.style.display = "none";
                 HSLogger.debug("quickbar hidden due to settings", this.context);
             } else {
-                quickbar.style.display = "";
                 this.setupQuickbarSectionEvents();
                 await this.refreshQuickbarIcons();
                 await this.host.refreshActiveLoadoutFromState();
@@ -112,7 +111,7 @@ export class HSAmbrosiaQuickbar {
             const clone = loadoutContainer.cloneNode(true) as HTMLElement;
             clone.id = HSGlobal.HSAmbrosia.quickBarId;
             clone.className = 'hs-quickbar-slots-wrapper';
-            clone.style.display = "none";
+            clone.style.display = "inline-flex";
 
             const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;
             const cloneLoadoutButtons = clone.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLButtonElement>;
@@ -159,7 +158,7 @@ export class HSAmbrosiaQuickbar {
         const clone = loadoutContainer.cloneNode(true) as HTMLElement;
         clone.id = HSGlobal.HSAmbrosia.quickBarId;
         clone.className = 'hs-quickbar-slots-wrapper';
-        clone.style.display = "";
+        clone.style.display = "inline-flex";
 
         const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;
         if (cloneSettingButton) {
@@ -293,7 +292,7 @@ export class HSAmbrosiaQuickbar {
         }
         const wrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
         if (wrapper) {
-            wrapper.style.display = "";
+            wrapper.style.display = "inline-flex";
             HSUI.injectStyle(this.host.getQuickbarCSS(), this.host.getQuickbarCSSId());
             await this.refreshQuickbarIcons();
             await this.host.refreshActiveLoadoutFromState();
