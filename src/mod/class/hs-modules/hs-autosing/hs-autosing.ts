@@ -133,7 +133,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // State Management
     #endStageDone: boolean = false;
     #observerActivated: boolean = false;
-    #coinDiagnosticIntervalId: number | null = null;
     #endStagePromise?: Promise<void>;
     #endStageResolve?: () => void;
     #antiquitiesObserver?: MutationObserver;
@@ -436,7 +435,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     async #validateSingularityRequirements(gameData: any): Promise<boolean> {
         if (!gameData) {
-            HSLogger.debug("Could not get game data", this.context);
+            HSLogger.warn("Could not get game data", this.context);
             return false;
         }
 
@@ -493,7 +492,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (!strategy) {
-            HSLogger.debug(`Autosing: Strategy "${selectedRawName}" not found or failed to load.`, this.context);
+            HSLogger.warn(`Strategy "${selectedRawName}" not found or failed to load.`, this.context);
             HSUI.Notify("Could not find or load strategy - Autosing stopped.", { notificationType: "warning" });
             this.stopAutosing();
             return null;
@@ -503,7 +502,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // MIGRATION NEXT STEP - This should not be needed anymore (except if users click the migrate button). To be removed.
         // Migrate to new IDs in-memory only — this copy is never persisted.
         HSSettings.migrateStrategyActionIdsAuto(runtimeStrategy, 'toNew');
-        HSLogger.log(`Autosing: loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory)`, this.context);
+        HSLogger.log(`Loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory)`, this.context);
 
         return runtimeStrategy;
     }
@@ -525,7 +524,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.#ambrosia_luck = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
         if (!this.#ambrosia_early_cube || !this.#ambrosia_late_cube || !this.#ambrosia_quark || !this.#ambrosia_obt || !this.#ambrosia_off || !this.#ambrosia_luck) {
-            HSLogger.debug("Autosing: Required Ambrosia loadout buttons missing.", this.context);
+            HSLogger.warn("Required Ambrosia loadout buttons missing.", this.context);
             HSUI.Notify("Could not find all required Ambrosia loadout buttons - Autosing stopped.", { notificationType: "warning" });
             this.stopAutosing();
             throw new Error("Missing ambrosia loadout buttons");
@@ -564,7 +563,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            HSLogger.debug(`Error during autosing logic: ${errorMessage}`, this.context);
+            HSLogger.warn(`Error during autosing logic: ${errorMessage}`, this.context);
             this.stopAutosing();
         }
     }
@@ -581,7 +580,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (stage === 'final') {
             phaseConfig = this.#finalPhaseConfig ?? null;
             if (!phaseConfig) {
-                HSLogger.debug("No final phase found in strategy - Autosing stopped.", this.context);
+                HSLogger.warn("No final phase found in strategy - Autosing stopped.", this.context);
                 this.stopAutosing();
                 return;
             }
@@ -614,7 +613,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const stageEndIndex: number = this.#getPhaseIndex(stageEnd);
 
         if (stageStartIndex === -1 || stageEndIndex === -1) {
-            HSLogger.debug(`Unknown stage ${stage} - Autosing stopped.`, this.context);
+            HSLogger.warn(`Unknown stage ${stage} - Autosing stopped.`, this.context);
             this.stopAutosing();
             return;
         }
@@ -623,12 +622,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         phaseConfig = ranges.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
 
         if (!phaseConfig) {
-            HSLogger.debug(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context);
+            HSLogger.warn(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context);
             this.stopAutosing();
             return;
         }
 
-        HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
+        HSLogger.debug(`Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         if (phaseConfig.startPhase === "start") {
             await this.#executePhase(phaseConfig, { skipInitialAscend: true });
         } else {
@@ -692,8 +691,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.#prevActionTime = performance.now();
         }
 
-        // this.#stopCoinDiagnostic();
-
         if (phaseConfig.endPhase == "end") {
             this.#endStageDone = true;
         }
@@ -705,7 +702,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const challenge = phaseConfig.strat[actionIndex];
 
         if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-            await HSUtils.sleepUntilElapsed(this.#prevActionTime, challenge.challengeWaitBefore);
+            await HSUtils.sleepUntilElapsed(this.#prevActionTime, challenge.challengeWaitBefore, this.context);
         }
 
         if (challenge.challengeNumber == 401) {
@@ -718,10 +715,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         } else if (challenge.challengeNumber == IF_JUMP_VALUE) {
             return await this.#handleIfJumpAction(challenge);
         } else if (challenge.challengeNumber >= 100) {
-            HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
+            HSLogger.debug(`Step#${actionIndex} - SA: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
             await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
         } else {
-            HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, max time: ${challenge.challengeMaxTime}`, this.context);
+            HSLogger.debug(`Step#${actionIndex} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, max time: ${challenge.challengeMaxTime}`, this.context);
             await this.#waitForCompletion(
                 challenge.challengeNumber,
                 challenge.challengeCompletions ?? 0,
@@ -987,7 +984,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (waitTime > 0) {
                     await HSUtils.sleep(waitTime);
                 }
-                HSLogger.debug(`Autosing: challenge${challengeIndex}. ${currentCompletions} completions reached`, this.context);
+                HSLogger.debug(`    ---> C${challengeIndex}: ${currentCompletions} completions reached`, this.context);
                 return;
             }
 
@@ -999,7 +996,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // No warning if minCompletions = 0 because it's ok strategy-wise
         if (challengeIndex <= 10 && minCompletions !== 0) {
-            HSLogger.warn(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
+            HSLogger.warn(`    ---> Timeout: C${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
         }
     }
 
@@ -1089,7 +1086,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions2.gte(maxPossible)) {
-                HSLogger.debug(`Challenge${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
+                HSLogger.debug(`    C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
                 return;
             }
 
@@ -1103,7 +1100,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     async #setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
         if (!this.#corruptionPromptInput || !this.#corruptionPromptOkBtn) {
-            HSLogger.debug("Error: could not access corruption prompt elements", this.context);
+            HSLogger.warn("Error: could not access corruption prompt elements", this.context);
             return;
         }
 
@@ -1208,39 +1205,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    #startCoinDiagnostic(): void {
-        this.#stopCoinDiagnostic();
-        const start = performance.now();
-        const logLine = () => {
-            const ep = HSGlobal.exposedPlayer;
-            const elapsed = (performance.now() - start).toFixed(0);
-            const foc = ep?.firstOwnedCoin ?? '?';
-            const u81 = ep?.upgrades?.[81] ?? '?';
-            const toggle1 = ep?.toggles?.[1] ?? '?';
-            const coins = ep?.coins ?? '?';
-            HSLogger.debug(
-                `[COIN-DIAG +${elapsed}ms] firstOwnedCoin=${foc}, upgrades[81]=${u81}, toggle1=${toggle1}, coins=${coins}`,
-                this.context
-            );
-        };
-        logLine();
-        this.#coinDiagnosticIntervalId = window.setInterval(() => {
-            logLine();
-            if (performance.now() - start >= 3000) {
-                this.#stopCoinDiagnostic();
-            }
-        }, 20);
-        HSLogger.debug(`[COIN-DIAG] Started diagnostic interval`, this.context);
-    }
-
-    #stopCoinDiagnostic(): void {
-        if (this.#coinDiagnosticIntervalId !== null) {
-            window.clearInterval(this.#coinDiagnosticIntervalId);
-            this.#coinDiagnosticIntervalId = null;
-            HSLogger.debug(`[COIN-DIAG] Stopped diagnostic interval`, this.context);
-        }
-    }
-
     #antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
         HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
         window.setTimeout(() => {
@@ -1276,7 +1240,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (isGreen()) return;
 
         const waitStart = performance.now();
-        HSLogger.debug(`[COIN-FIX] Waiting for #upg81 to turn green (upgrades[81] auto-bought)...`, this.context);
+        HSLogger.debug(`[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
 
         const turned = await new Promise<boolean>(resolve => {
             const timer = window.setTimeout(() => {
@@ -1299,7 +1263,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (turned) {
             HSLogger.debug(`[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
         } else {
-            HSLogger.warn(`[COIN-FIX] #upg81 still not green after ${maxWaitMs}ms, firstOwnedCoin bug may occur...`, this.context);
+            HSLogger.warn(`[COIN-FIX] #upg81 still not green after ${maxWaitMs}ms...`, this.context);
         }
     }
 
@@ -1349,7 +1313,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return m[1].trim();
             }
         } catch (e) {
-            HSLogger.debug(`Error reading stage element: ${e}`, this.context);
+            HSLogger.warn(`Error reading stage element: ${e}`, this.context);
         }
 
         return this.#getStageViaDOM();
@@ -1460,8 +1424,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stage = await this.#getStage();
         }
 
-        // this.#startCoinDiagnostic();
-
         // this.#antiBuyCoinBug(0, 15, 20);
 
         this.#observeAntiquitiesRune();
@@ -1506,7 +1468,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     #observeAntiquitiesRune(): void {
         if (!this.#antiquitiesRuneLockedContainer) {
-            HSLogger.debug("Could not find antiquitiesRuneLockedContainer element", this.context);
+            HSLogger.warn("Could not find antiquitiesRuneLockedContainer element", this.context);
             return;
         }
 
@@ -1517,7 +1479,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     const style = (mutation.target as HTMLElement).style;
                     if (style.display === 'none') {
-                        HSLogger.debug('antiquitiesRuneLockedContainer hidden - buying antiquities', this.context);
+                        HSLogger.debug('antiquitiesRuneLockedContainer found hidden - buying antiquities', this.context);
                         this.#observerActivated = true;
                         this.#antiquitiesObserver?.disconnect();
                         this.#antiquitiesObserver = undefined;

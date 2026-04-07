@@ -877,7 +877,6 @@ export class HSAutosingModal {
      * Reset phase tracking and update UI.
      */
     #startLiveTimer(): void {
-        HSLogger.log('Starting new singularity', this.#context);
         this.#clearSingularityInterval();
         this.#lastSingularityTimestamp = performance.now();
         this.#currentPhaseStart = this.#lastSingularityTimestamp;

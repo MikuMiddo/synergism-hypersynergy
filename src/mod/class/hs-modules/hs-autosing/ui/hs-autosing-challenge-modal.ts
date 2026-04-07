@@ -876,7 +876,7 @@ export async function openAutosingChallengesModal(
                             ifJumpMultiplier: isChallengesMode
                                 ? 0 // Not used in challenges mode
                                 : Number((document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value),
-                            ifJumpIndex: existingEntry?.ifJump?.ifJumpIndex ?? workingChallenges.length + 1
+                            ifJumpIndex: existingEntry?.ifJump?.ifJumpIndex ?? separatorIndex + 1
 
                         }
                     } as Challenge & any;
@@ -909,8 +909,9 @@ export async function openAutosingChallengesModal(
                     workingChallenges[editingIndex] = newEntry;
                 } else {
                     workingChallenges.splice(separatorIndex, 0, newEntry);
-                    // Increment jump-target indices for IF jumps at or after the insertion point
+                    // Increment jump-target indices for existing IF jumps at or after the insertion point
                     for (let i = 0; i < workingChallenges.length; i++) {
+                        if (i === separatorIndex) continue;
                         const entry = workingChallenges[i];
                         if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
                             if (entry.ifJump.ifJumpIndex >= separatorIndex) {

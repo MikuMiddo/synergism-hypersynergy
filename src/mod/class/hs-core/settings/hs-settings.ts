@@ -388,14 +388,11 @@ export class HSSettings extends HSModule {
     }
 
     static autoBuildSettingsUI(): { didBuild: boolean, navHTML: string, pagesHTML: string } {
-        const self = this;
-
         if (!HSSettings.#settingsParsed) {
             HSLogger.error(`Could not sync settings - settings not parsed yet`, HSSettings.#staticContext);
             return { didBuild: false, navHTML: '', pagesHTML: '' };
         }
 
-        const settingsBlocks: string[] = [];
         let didBuild = true;
 
         // Sort the settings by their control group
@@ -409,9 +406,8 @@ export class HSSettings extends HSModule {
                 return -1;
             } else if (bControlGroup) {
                 return 1;
-            } else {
-                return 0;
             }
+            return 0;
         });
 
         // Sort the pages
@@ -425,16 +421,14 @@ export class HSSettings extends HSModule {
                 return -1;
             } else if (bPage) {
                 return 1;
-            } else {
-                return 0;
             }
+            return 0;
         });
 
         const subTabs = [];
 
         for (const [key, page] of sortedPages) {
             const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
-
             if (!haveAnySettingsForPage) continue;
 
             subTabs.push(HSUIC.Div({
@@ -448,26 +442,30 @@ export class HSSettings extends HSModule {
             }));
         }
 
-        let navHTML = HSUIC.Div({
+        const navHTML = HSUIC.Div({
             class: 'hs-panel-subtabs',
             html: subTabs
         });
 
-        let pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
-
+        const pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
         let currentControlGroup: string | null = null;
 
         for (const [key, settingObj] of sortedSettings) {
             const setting = settingObj.getDefinition();
             // Skip rendering if 'hidden': true is set on the setting
-            if ((setting as any).hidden === true) {
-                continue;
-            }
+            if ((setting as any).hidden === true) continue;
+
             const controls = setting.settingControl;
+            if (!controls) {
+                HSLogger.error(`Error autobuilding settings UI, controls not defined for setting ${key}`, HSSettings.#staticContext);
+                didBuild = false;
+                break;
+            }
+
+            const pageHTMLs = pagesHTML.get(controls.controlPage) || [];
             const settingBlockId = setting.settingBlockId || undefined;
 
             let gameDataIcon = "";
-
             if (setting.usesGameData) {
                 gameDataIcon = HSUIC.Image({
                     class: 'hs-panel-setting-block-gamedata-icon',
@@ -478,156 +476,65 @@ export class HSSettings extends HSModule {
                 });
             }
 
-            if (controls) {
-                const pageHTMLs = pagesHTML.get(controls.controlPage) || [];
-                let components: string[] = [];
-
-                // Check if the control group is different from the previous one
-                // If so, create a new setting group header
-                if (!currentControlGroup || currentControlGroup !== controls.controlGroup) {
-                    currentControlGroup = controls.controlGroup;
-                    const controlGroup = HSSettings.#settingsControlGroups[currentControlGroup];
-
-                    // Create control group header
-                    pageHTMLs.push(HSUIC.Div({
-                        html: controlGroup.groupName,
-                        styles: {
-                            borderBottom: '1px solid limegreen',
-                            gridColumn: 'span 2',
-                            marginBottom: '15px'
-                        }
-                    }))
-                }
-
-                if (controls.controlType === "switch") {
-                    components = [
-                        HSUIC.Div({
-                            class: 'hs-panel-setting-block-text-wrapper',
-                            styles: {
-                                display: 'flex',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                            },
-                            html: [
-                                HSUIC.P({
-                                    class: 'hs-panel-setting-block-text',
-                                    props: { title: setting.settingHelpText },
-                                    text: setting.settingDescription,
-                                    styles: { margin: '0' }
-                                }),
-                                gameDataIcon
-                            ]
-                        }),
-                    ]
-
-                    if (controls.controlEnabledId) {
-                        components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn hs-panel-settings-block-btn-standalone', id: controls.controlEnabledId, text: "" }));
-                    }
-                } else if (controls.controlType === "button") {
-                    components = [
-                        HSUIC.Button({
-                            id: controls.controlId!,
-                            text: setting.settingDescription || 'Error: No button text'
-                        })
-                    ];
-                } else {
-                    let convertedType: HSInputType | null = null;
-
-                    switch (controls.controlType) {
-                        case "text":
-                            convertedType = HSInputType.TEXT;
-                            break;
-                        case "number":
-                            convertedType = HSInputType.NUMBER;
-                            break;
-                        case "select":
-                            convertedType = HSInputType.SELECT;
-                            break;
-                        case "state":
-                            convertedType = HSInputType.STATE;
-                            break;
-                        default:
-                            convertedType = null;
-                    }
-
-                    if (convertedType) {
-                        // Setting header
-                        components = [
-                            HSUIC.Div({
-                                class: 'hs-panel-setting-block-text-wrapper',
-                                styles: {
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                },
-                                html: [
-                                    HSUIC.P({
-                                        class: 'hs-panel-setting-block-text',
-                                        props: { title: setting.settingHelpText },
-                                        text: setting.settingDescription,
-                                        styles: { margin: '0' }
-                                    }),
-                                    gameDataIcon
-                                ]
-                            })
-                        ];
-
-                        // Setting value input
-                        if (convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
-                            components.push(HSUIC.Input({ class: 'hs-panel-setting-block-num-input', id: controls.controlId, type: convertedType }));
-                        } else if (convertedType === HSInputType.SELECT) {
-                            if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
-                                const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
-                                controls.selectOptions.length = 0;
-                                controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-                                HSLogger.log(`Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`, self.#staticContext);
-                            }
-                            if (controls.selectOptions) {
-                                components.push(HSUIC.Select(
-                                    { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType, props: controls.props },
-                                    controls.selectOptions
-                                ));
-                            } else {
-                                HSLogger.error(`Error autobuilding settings UI, ${setting.settingName} does not have selectOptions defined`, self.#staticContext);
-                                didBuild = false;
-                                break;
-                            }
-                        } else if (convertedType === HSInputType.STATE) {
-                            components.push(HSUIC.P({ class: 'hs-panel-setting-block-state', id: controls.controlId, text: "" }));
-                        }
-
-                        // Create setting on/off toggle
-                        if (controls.controlEnabledId) {
-                            components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn', id: controls.controlEnabledId, text: "" }))
-                        }
-                    } else {
-                        HSLogger.error(`Error autobuilding settings UI, control type resolution failed (how??)`, self.#staticContext);
-                        didBuild = false;
-                        break;
-                    }
-                }
-
-                // Create setting block which contains the setting header, value input and on/off toggle
-
-                // Add special class for inline button layout in strategy rows
-                let blockClass = 'hs-panel-setting-block';
-                if (controls.controlType === "button" &&
-                    (controls.controlGroup === "auto-sing-strategy-controls")) {
-                    blockClass += ' hs-inline-button';
-                }
-
+            // Check if the control group is different from the previous one
+            // If so, create a new setting group header
+            if (controls.controlGroup !== currentControlGroup) {
+                currentControlGroup = controls.controlGroup;
+                const controlGroup = HSSettings.#settingsControlGroups[currentControlGroup];
                 pageHTMLs.push(HSUIC.Div({
-                    id: settingBlockId,
-                    class: blockClass,
-                    html: components
+                    class: 'hs-panel-setting-block-group-header',
+                    html: controlGroup.groupName
                 }));
-
-                pagesHTML.set(controls.controlPage, pageHTMLs);
-            } else {
-                HSLogger.error(`Error autobuilding settings UI, controls not defined for setting ${key}`, self.#staticContext);
-                didBuild = false;
-                break;
             }
+
+            let components: string[] = [];
+            if (controls.controlType === 'switch') {
+                components.push(HSSettings.#buildSettingTextWrapper(setting, controls, gameDataIcon));
+            } else if (controls.controlType === 'button') {
+                components = [HSUIC.Button({
+                    id: controls.controlId!,
+                    text: setting.settingDescription || 'Error: No button text'
+                })];
+            } else {
+                const convertedType = HSSettings.#resolveControlTypeInput(controls.controlType);
+                if (!convertedType) {
+                    HSLogger.error(`Error autobuilding settings UI, control type resolution failed (how??)`, HSSettings.#staticContext);
+                    didBuild = false;
+                    break;
+                }
+
+                components.push(HSSettings.#buildSettingTextWrapper(setting, controls, gameDataIcon));
+                const valueRowChildren = HSSettings.#buildSettingValueChildren(controls, convertedType, setting);
+                if (!valueRowChildren) {
+                    didBuild = false;
+                    break;
+                }
+
+                if (controls.controlEnabledId) {
+                    components.push(HSUIC.Div({
+                        class: 'hs-panel-setting-block-input-row',
+                        html: valueRowChildren
+                    }));
+                } else {
+                    components.push(...valueRowChildren);
+                }
+            }
+
+
+            // Add special class for inline button layout in strategy rows
+            // Create setting block which contains the setting header, value input and on/off toggle
+            let blockClass = 'hs-panel-setting-block';
+            if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+                blockClass += ' hs-inline-button';
+            }
+
+            pageHTMLs.push(HSUIC.Div({
+                id: settingBlockId,
+                class: blockClass,
+                html: components
+            }));
+
+            pagesHTML.set(controls.controlPage, pageHTMLs);
         }
 
         for (const [pageName, pages] of pagesHTML.entries()) {
@@ -638,17 +545,93 @@ export class HSSettings extends HSModule {
             })]);
         }
 
-        const flatPages = [];
-
-        for (const [pageName, pages] of pagesHTML.entries()) {
-            flatPages.push(pages.join(''));
-        }
+        const flatPages = Array.from(pagesHTML.values()).flat().join('');
 
         return {
             didBuild,
-            navHTML: navHTML,
-            pagesHTML: flatPages.join('')
+            navHTML,
+            pagesHTML: flatPages
         };
+    }
+
+    static #resolveControlTypeInput(controlType: string): HSInputType | null {
+        switch (controlType) {
+            case 'text':
+                return HSInputType.TEXT;
+            case 'number':
+                return HSInputType.NUMBER;
+            case 'select':
+                return HSInputType.SELECT;
+            case 'state':
+                return HSInputType.STATE;
+            default:
+                return null;
+        }
+    }
+
+    static #buildSettingTextWrapper(setting: HSSettingBase<HSSettingType>, controls: any, gameDataIcon: string) {
+        const children: string[] = [];
+        if (controls.controlEnabledId) {
+            children.push(HSUIC.Button({
+                class: 'hs-panel-setting-block-btn',
+                id: controls.controlEnabledId,
+                text: ''
+            }));
+        }
+
+        children.push(HSUIC.P({
+            class: 'hs-panel-setting-block-text',
+            props: { title: setting.settingHelpText },
+            text: setting.settingDescription
+        }));
+
+        if (gameDataIcon) {
+            children.push(gameDataIcon);
+        }
+
+        return HSUIC.Div({
+            class: 'hs-panel-setting-block-text-wrapper',
+            html: children
+        });
+    }
+
+    static #buildSettingValueChildren(controls: any, convertedType: HSInputType, setting: HSSettingBase<HSSettingType>) {
+        const valueRowChildren: string[] = [];
+
+        if (convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
+            valueRowChildren.push(HSUIC.Input({
+                class: 'hs-panel-setting-block-num-input',
+                id: controls.controlId,
+                type: convertedType
+            }));
+        } else if (convertedType === HSInputType.SELECT) {
+            if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
+                const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
+                controls.selectOptions.length = 0;
+                controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
+                HSLogger.log(`Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`, HSSettings.#staticContext);
+            }
+
+            if (!controls.selectOptions) {
+                HSLogger.error(`Error autobuilding settings UI, ${setting.settingName} does not have selectOptions defined`, HSSettings.#staticContext);
+                return null;
+            }
+
+            valueRowChildren.push(HSUIC.Select({
+                class: 'hs-panel-setting-block-select-input',
+                id: controls.controlId,
+                type: convertedType,
+                props: controls.props
+            }, controls.selectOptions));
+        } else if (convertedType === HSInputType.STATE) {
+            valueRowChildren.push(HSUIC.P({
+                class: 'hs-panel-setting-block-state',
+                id: controls.controlId,
+                text: ''
+            }));
+        }
+
+        return valueRowChildren;
     }
 
     static validateStrategy(strategy: HSAutosingStrategy) {
