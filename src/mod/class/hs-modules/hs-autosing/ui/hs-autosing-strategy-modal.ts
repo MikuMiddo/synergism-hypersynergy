@@ -3,6 +3,8 @@ import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NA
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
+import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
+import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
@@ -192,18 +194,24 @@ export class HSAutosingStrategyModal {
                     strategyDraft.strategyName = nameInput?.value || "Unnamed Strategy";
                     try {
                         if (isEditMode) {
-                            HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
-                            HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
+                            const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName, context);
+                            if (!saved) {
+                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                return;
+                            }
+                            HSSettingsUI.updateStrategyDropdownList();
+                            HSSettingsUI.selectAutosingStrategyByName(existingStrategy!.strategyName);
                             HSLogger.log(`Strategy "${strategyDraft.strategyName}" updated.`, context);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
-                                notificationType: "success"
-                            });
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, { notificationType: "success" });
                         } else {
-                            HSSettings.saveStrategyToStorage(strategyDraft);
-                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, {
-                                notificationType: "success"
-                            });
+                            const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, undefined, context);
+                            if (!saved) {
+                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                return;
+                            }
+                            HSSettingsUI.updateStrategyDropdownList();
+                            HSSettingsUI.selectAutosingStrategyByName(strategyDraft.strategyName);
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, { notificationType: "success" });
                         }
                         uiMod.CloseModal(modalID);
                     } catch (err) {

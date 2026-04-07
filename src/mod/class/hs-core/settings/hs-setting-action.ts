@@ -8,6 +8,9 @@ import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
+import { HSSettingsUI } from "./hs-settings-ui";
+import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSUI } from "../hs-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
 
@@ -100,7 +103,7 @@ export class HSSettingActions {
         },
 
         hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
-            HSSettings.applyHiddenVanillaTabsSetting();
+            HSSettingsUI.applyHiddenVanillaTabsSetting();
         },
 
         patch: async (params: HSSettingActionParams) => {
@@ -201,26 +204,41 @@ export class HSSettingActions {
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.editSelectedStrategy();
+            await HSSettingsUI.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.deleteSelectedStrategy();
+            await HSSettingsUI.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.exportSelectedStrategy();
+            await HSSettingsUI.exportSelectedStrategy();
         },
 
         migrateAndSaveAllUserStrategies: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.migrateAndSaveAllUserStrategies();
+            const result = HSStrategyManager.migrateAndSaveAllUserStrategies(context);
+            if (!result.success) {
+                if (result.invalidStrategies.length > 0) {
+                    const firstFew = result.invalidStrategies.slice(0, 3).join(', ');
+                    const more = result.invalidStrategies.length > 3 ? ` (+${result.invalidStrategies.length - 3} more)` : '';
+                    HSUI.Notify( `Migrate&Save aborted: some strategies are not strictly old/new ID state. Fix and retry. ${firstFew}${more}`, { notificationType: "error" } );
+                } else {
+                    HSUI.Notify("Failed to save migrated strategies to localStorage", { notificationType: "error" });
+                }
+                HSLogger.warn(`Migrate&Save failed`, context);
+                return;
+            }
+
+            HSSettingsUI.updateStrategyDropdownList();
+            HSUI.Notify(`Migrate&Save done: scanned ${result.totalStrategies}, saved ${result.userStrategies.length} user strategies, migrated ${result.migratedStrategies} to OLD ids, dropped ${result.droppedDefaults} defaults from localStorage.`, { notificationType: "success" });
+            HSLogger.log(`Migrate&Save completed (scanned=${result.totalStrategies}, saved=${result.userStrategies.length}, migrated=${result.migratedStrategies} to OLD ids, dropped ${result.droppedDefaults} defaults from localStorage.`, context);
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.importStrategy();
+            await HSSettingsUI.importStrategy();
         },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
