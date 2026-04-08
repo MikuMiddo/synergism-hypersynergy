@@ -122,6 +122,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     // DOM Elements - Corruptions
     #corrNext: Record<string, HTMLElement | null> = {};
+    #corruptionStatsContainer?: HTMLElement | null;
     #corruptionPromptInput!: HTMLInputElement;
     #corruptionPromptOkBtn!: HTMLButtonElement;
     #addCodeAllBtn!: HTMLButtonElement;
@@ -220,6 +221,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     #cacheCorruptionElements(): void {
         this.#corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
         this.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
+        this.#corruptionStatsContainer = document.getElementById('corruptionStats');
         this.#addCodeAllBtn = document.getElementById("addCodeAll") as HTMLButtonElement;
         this.#timeCodeBtn = document.getElementById("timeCode") as HTMLButtonElement;
         
@@ -926,14 +928,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const getCompletions = accessor.getCompletions;
         const getGoal = accessor.getGoal;
 
-        if (!challengeBtn) {
-            HSLogger.debug(`Challenge button ${challengeIndex} not found - Autosing stopped.`, this.context);
-            this.stopAutosing();
-            return;
-        }
-
-        if (!accessor.levelElement) {
-            HSLogger.debug(`Challenge level element ${challengeIndex} not found - Autosing stopped.`, this.context);
+        if (!challengeBtn! || accessor.levelElement) {
+            HSLogger.debug(`Challenge element ${challengeIndex} not found - Autosing stopped.`, this.context);
             this.stopAutosing();
             return;
         }
@@ -1112,12 +1108,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.#corruptionPromptInput.value = jsonString;
             await HSUtils.click(this.#corruptionPromptOkBtn);
 
-            const current = this.#getNextCorruptionsFromCache();
-            if (this.#corruptionsMatch(current, targetCorruptions)) {
+            const success = await this.#waitForCorruptionMatch(targetCorruptions, 500);
+            if (success) {
                 HSLogger.debug(`Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.context);
                 break;
             }
-            await HSUtils.sleep(this.#sleepTime);
+            const current = this.#getNextCorruptionsFromCache();
+            HSLogger.debug(`Corruptions did not match after timeout: ${this.#stringifyCorruptions(current)}`, this.context);
         }
     }
 
@@ -1148,6 +1145,49 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             dilation: getVal("dilation"),
             hyperchallenge: getVal("hyperchallenge")
         };
+    }
+
+    async #waitForCorruptionMatch(targetCorruptions: CorruptionLoadout, timeoutMs = 500): Promise<boolean> {
+        if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+            return true;
+        }
+
+        const container = this.#corruptionStatsContainer;
+        if (!container) {
+            return false;
+        }
+
+        return new Promise<boolean>((resolve) => {
+            let finished = false;
+
+            const cleanup = (result: boolean) => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve(result);
+            };
+
+            const observer = new MutationObserver(() => {
+                if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+                    cleanup(true);
+                }
+            });
+
+            const timeoutId = window.setTimeout(() => {
+                cleanup(false);
+            }, timeoutMs);
+
+            observer.observe(container, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+
+            if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+                cleanup(true);
+            }
+        });
     }
 
     #getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
@@ -1273,11 +1313,50 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     async #setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
         loadout.click();
-        while (!this.#isInAmbLoadout(loadout)) {
+        await this.#waitForAmbrosiaLoadoutSelected(loadout, 500);
+    }
+
+    async #waitForAmbrosiaLoadoutSelected(loadout: HTMLButtonElement, timeoutMs = 500): Promise<void> {
+        if (this.#isInAmbLoadout(loadout)) {
+            return;
+        }
+
+        await new Promise<void>((resolve) => {
+            let finished = false;
+
+            const cleanup = (): void => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve();
+            };
+
+            const observer = new MutationObserver(() => {
+                if (this.#isInAmbLoadout(loadout)) {
+                    cleanup();
+                }
+            });
+
+            const timeoutId = window.setTimeout(() => {
+                cleanup();
+            }, timeoutMs);
+
+            observer.observe(loadout, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
             if (this.#isInAmbLoadout(loadout)) {
-                return;
+                cleanup();
             }
-            await HSUtils.sleep(this.#sleepTime);
+        });
+
+        if (!this.#isInAmbLoadout(loadout)) {
+            HSLogger.debug(`Ambrosia loadout did not select within ${timeoutMs}ms, falling back to polling.`, this.context);
+            while (!this.#isInAmbLoadout(loadout)) {
+                await HSUtils.sleep(this.#sleepTime);
+            }
         }
     }
 
@@ -1417,9 +1496,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         HSLogger.debug("Singularity performed", this.context);
 
         let stage = stageInitial;
-        let i = 0;
         while (!this.#isAllowedStage(stage)) {
-            i++;
             await HSUtils.sleep(1);
             stage = await this.#getStage();
         }
@@ -1433,13 +1510,59 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async #enterAndLeaveExalt(): Promise<void> {
 
         await HSUtils.click(this.#exalt2Btn);
-        while (!this.#isInExalt()) {
-            await HSUtils.sleep(this.#sleepTime);
-        }
+        await this.#waitForExaltState(true);
 
         await HSUtils.click(this.#exalt2Btn);
-        while (this.#isInExalt()) {
-            await HSUtils.sleep(this.#sleepTime);
+        await this.#waitForExaltState(false);
+    }
+
+    async #waitForExaltState(targetState: boolean, timeoutMs = 3000): Promise<void> {
+        if (this.#isInExalt() === targetState) {
+            return;
+        }
+
+        const exaltTimerElement = this.#exaltTimer;
+        if (!exaltTimerElement) {
+            HSLogger.warn("Could not observe exalt state because exalt timer element is missing.", this.context);
+            return;
+        }
+
+        await new Promise<void>((resolve) => {
+            let finished = false;
+
+            const cleanup = (): void => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve();
+            };
+
+            const observer = new MutationObserver(() => {
+                if (this.#isInExalt() === targetState) {
+                    cleanup();
+                }
+            });
+
+            const timeoutId = window.setTimeout(() => {
+                cleanup();
+            }, timeoutMs);
+
+            observer.observe(exaltTimerElement, {
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+
+            if (this.#isInExalt() === targetState) {
+                cleanup();
+            }
+        });
+
+        if (this.#isInExalt() !== targetState) {
+            HSLogger.warn(`Timeout waiting for exalt ${targetState ? 'enter' : 'exit'} state; falling back to polling.`, this.context);
+            while (this.#isInExalt() !== targetState) {
+                await HSUtils.sleep(this.#sleepTime);
+            }
         }
     }
 
@@ -1452,15 +1575,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return ALLOWED.some(allowed => stage.includes(allowed));
     }
 
-    #getCurrentQuarks(): Promise<number> {
-        const data = this.#gameDataAPI?.getGameData();
-        return Promise.resolve(data?.worlds ?? 0);
-    }
-
-    #getCurrentGoldenQuarks(): Promise<number> {
-        const data = this.#gameDataAPI?.getGameData();
-        return Promise.resolve(data?.goldenQuarks ?? 0);
-    }
 
     // ============================================================================
     // ANTIQUITIES
