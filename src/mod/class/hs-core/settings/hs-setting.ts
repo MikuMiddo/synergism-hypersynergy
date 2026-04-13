@@ -174,8 +174,10 @@ export abstract class HSSetting<T extends HSSettingType> {
         HSSettings.saveSettingsToStorage();
     }
 
-    // For settings which have a settingAction defined, this will be called when the setting is initialized
+    // For settings which have a settingAction defined but no skipInit,
+    // this will be called when the setting is initialized
     async initialAction(changeType: 'value' | 'state', initialState?: boolean) {
+        if (this.definition.skipInit) return;
         await this.handleSettingAction(changeType, initialState);
     }
 

@@ -1,6 +1,8 @@
 import { HSLogger } from '../../hs-core/hs-logger';
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
+import { HSGameState, MainView } from '../../hs-core/hs-gamestate';
+import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -259,6 +261,10 @@ export class HSAutosingSettingsFixer {
             return !Number.isNaN(numeric) && numeric === expected;
         };
 
+        // Save user tab
+        const gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
+        const prevMainView = gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+        
         // Track which selectors were corrected or failed
         const correctedSelectors: string[] = [];
         const failedSelectors: string[] = [];
@@ -307,6 +313,9 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(req.selector);
             }
         }
+        
+        // Restore user tab
+        prevMainView.goto();
 
         // Log final verification result
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
@@ -356,7 +365,7 @@ export class HSAutosingSettingsFixer {
     }
 
     /**
-     * Ensure challenge auto states for challenge 1-15.
+     * Ensure challenge auto states for challenge 1-10.
      */
     static async #ensureChallengeAutoStates(): Promise<void> {
         // Track which challenge selectors were corrected or failed
@@ -437,6 +446,18 @@ export class HSAutosingSettingsFixer {
                 HSLogger.debug(() => `disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
             }
         }
+        // Enable autoConfirmPopups for autosing. Tracked with '+' prefix so restore knows to disable it.
+        const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups');
+        if (autoConfirmSetting) {
+            if (!autoConfirmSetting.isEnabled()) {
+                autoConfirmSetting.enable();
+                disabledSettings.push('+autoConfirmPopups');
+                HSLogger.debug(() => `disableUnwantedSettings: enabled "autoConfirmPopups" for autosing`, HSAutosingSettingsFixer.#context);
+            }
+        } else {
+            HSLogger.warn(`disableUnwantedSettings: setting "autoConfirmPopups" not found`, HSAutosingSettingsFixer.#context);
+        }
+
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, HSAutosingSettingsFixer.#context);
         } else {
@@ -446,15 +467,22 @@ export class HSAutosingSettingsFixer {
     }
 
     public static restoreUnwantedSettings(settingsToRestore: string[]): void {
-        // Reverse order to re-enable GDS first
+        // Reverse order to re-enable GDS first.
+        // Keys prefixed with '+' were enabled by autosing and must be disabled on restore.
         for (let i = settingsToRestore.length - 1; i >= 0; i--) {
-            const settingKey = settingsToRestore[i];
+            const raw = settingsToRestore[i];
+            const inverted = raw.startsWith('+');
+            const settingKey = inverted ? raw.slice(1) : raw;
             const setting = HSSettings.getSetting(settingKey as keyof HSSettingsDefinition);
-            if (setting && typeof setting.enable === 'function') {
-                setting.enable();
+            if (setting) {
+                if (inverted) {
+                    setting.disable();
+                } else {
+                    setting.enable();
+                }
                 HSLogger.log(`restoreUnwantedSettings: restored "${settingKey}"`, HSAutosingSettingsFixer.#context);
             } else {
-                HSLogger.warn(`restoreUnwantedSettings: setting "${settingKey}" not found or cannot be re-enabled`, HSAutosingSettingsFixer.#context);
+                HSLogger.warn(`restoreUnwantedSettings: setting "${settingKey}" not found or cannot be restored`, HSAutosingSettingsFixer.#context);
             }
         }
     }

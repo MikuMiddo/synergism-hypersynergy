@@ -1,5 +1,18 @@
 export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
 
+export interface SparklineMetric {
+    timestamp: number;
+    duration: number;
+    quarksGained: number;
+    goldenQuarksGained: number;
+    phases: Record<string, number>;
+    c15?: string;
+    runningAvgDuration: number;
+    runningAvgQuarksPerSecond: number;
+    runningAvgGoldenQuarksPerSecond: number;
+    happyHourStackAmount: number;
+}
+
 /**
  * Updates the sparkline chart display for the given DOM and data.
  * single-pass min/max/sum, no intermediate array allocations,
@@ -7,7 +20,7 @@ export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
  */
 export function updateSparkline(
     dom: SparklineDom | null,
-    data: any[],
+    data: SparklineMetric[],
     computedGraphWidth: number | null,
     formatNumberWithSign: (n: number) => string,
     maxPoints: number

@@ -45,6 +45,15 @@ export class HSSettingActions {
             }
         },
 
+        autoConfirmPopups: async (params: HSSettingActionParams) => {
+            if (params.disable && params.disable === true) {
+                (window as any).__HS_AUTO_CONFIRM = false;
+            } else {
+                // Auto validate pop-ups
+                (window as any).__HS_AUTO_CONFIRM = true;
+            }
+        },
+
         logTimestamp: async (params: HSSettingActionParams) => {
             if (params.disable && params.disable === true) {
                 HSLogger.setTimestampDisplay(false);

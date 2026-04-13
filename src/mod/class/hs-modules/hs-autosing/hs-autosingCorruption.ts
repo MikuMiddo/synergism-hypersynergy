@@ -1,5 +1,6 @@
 import { CorruptionLoadout, CorruptionLoadoutDefinition, AutosingStrategyPhase } from "../../../types/module-types/hs-autosing-types";
 import { HSLogger } from "../../hs-core/hs-logger";
+import { HSGlobal } from "../../hs-core/hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 
 export const CORRUPTION_NAMES = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'] as const;
@@ -27,6 +28,7 @@ export class HSAutosingCorruption {
     readonly #corruptionPromptInput: HTMLInputElement;
     readonly #corruptionPromptOkBtn: HTMLButtonElement;
     readonly #importBtn: HTMLButtonElement;
+    #applyCorruptionsFunc: ((json: string) => boolean) | null;
 
     #loadoutByName: Map<string, CorruptionLoadout> = new Map();
 
@@ -42,52 +44,11 @@ export class HSAutosingCorruption {
         this.#corruptionPromptInput = corruptionPromptInput;
         this.#corruptionPromptOkBtn = corruptionPromptOkBtn;
         this.#importBtn = importBtn;
+        this.#applyCorruptionsFunc = null;
     }
 
-    async setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
-        const jsonString = JSON.stringify(corruptions);
-
-        while (true) {
-            this.#importBtn.click();
-            this.#corruptionPromptInput.value = jsonString;
-
-            HSUtils.clickWithoutSleep(this.#corruptionPromptOkBtn);
-            const success = await this.#waitForCorruptionMatch(corruptions, 500);
-            if (success) {
-                HSLogger.debug(() => `Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.#context);
-                break;
-            }
-            HSLogger.debug(() => `Corruptions did not match after timeout: ${this.#stringifyCorruptions(this.#getNextCorruptionsFromCache())}`, this.#context);
-        }
-    }
-
-    getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
-        if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") {
-            return null;
-        }
-
-        if (phaseConfig.corruptionLoadoutName === undefined) {
-            return phaseConfig.corruptions ?? null;
-        }
-
-        const named = this.#getLoadoutByName(phaseConfig.corruptionLoadoutName);
-        return named ?? phaseConfig.corruptions ?? null;
-    }
-
-    async applyLoadoutByName(name?: string | null): Promise<void> {
-        const loadout = this.#getLoadoutByName(name);
-        if (!loadout) {
-            HSLogger.debug(() => `Loadout not found: ${name ?? "(none)"}`, this.#context);
-            return;
-        }
-        await this.setCorruptions(loadout);
-    }
-
-    buildLoadoutCache(defs: CorruptionLoadoutDefinition[]): void {
-        this.#loadoutByName.clear();
-        for (const d of defs) {
-            this.#loadoutByName.set(d.name, { ...d.loadout });
-        }
+    setApplyCorruptionsFunc(fn: ((json: string) => boolean) | null): void {
+        this.#applyCorruptionsFunc = fn;
     }
 
     #corruptionsMatchDOM(target: CorruptionLoadout): boolean {
@@ -99,20 +60,53 @@ export class HSAutosingCorruption {
         return true;
     }
 
-    #getNextCorruptionsFromCache(): CorruptionLoadout {
-        const result = {} as CorruptionLoadout;
+    #corruptionsMatchExposedPlayer(target: CorruptionLoadout): boolean {
+        const next = HSGlobal.exposedPlayer!.corruptions?.next;
+        if (!next) return false;
         for (const name of CORRUPTION_NAMES) {
-            const el = this.#corrNext[name];
-            result[name] = el ? parseInt(el.textContent || '0', 10) : 0;
+            if (next.getLevel(name) !== target[name]) return false;
         }
-        return result;
+        return true;
+    }
+
+    async setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
+        const jsonString = JSON.stringify(corruptions);
+
+        // Fast path: call applyCorruptions directly — no UI clicks, no prompt, synchronous.
+        if (this.#applyCorruptionsFunc) {
+            this.#applyCorruptionsFunc(jsonString);
+            HSLogger.debug(() => `Corruptions set (fast): ${jsonString}`, this.#context);
+            // while(!await this.#waitForCorruptionMatch(corruptions, 500));    // Should not be needed...
+            return;
+        }
+
+        // Fallback: click-based flow with DOM observer.
+        this.#importBtn.click();
+        this.#corruptionPromptInput.value = jsonString;
+        this.#corruptionPromptOkBtn.click();
+        while(!await this.#waitForCorruptionMatch(corruptions, 500));
+        HSLogger.debug(() => `Corruptions set: ${jsonString}`, this.#context);
+        return;
     }
 
     async #waitForCorruptionMatch(targetCorruptions: CorruptionLoadout, timeoutMs = 500): Promise<boolean> {
-        if (this.#corruptionsMatchDOM(targetCorruptions)) { return true; }
+        // Fast path: player.corruptions.next is updated synchronously by the game's click handler.
+        // This one should not be needed since setCorruptions should handle it, and we're already supposed to be on the fall-back path...
+        if (HSGlobal.exposedPlayer) {
+            if (this.#corruptionsMatchExposedPlayer(targetCorruptions)) return true;
+            const endTime = performance.now() + timeoutMs;
+            while (performance.now() < endTime) {
+                await HSUtils.waitForNextTick();
+                if (this.#corruptionsMatchExposedPlayer(targetCorruptions)) return true;
+            }
+            return false;
+        }
+
+        // Fallback: DOM observer
+        if (this.#corruptionsMatchDOM(targetCorruptions)) return true;
 
         const container = this.#corruptionStatsContainer;
-        if (!container) { return false; }
+        if (!container) return false;
 
         return new Promise<boolean>((resolve) => {
             let finished = false;
@@ -124,7 +118,7 @@ export class HSAutosingCorruption {
                 resolve(result);
             };
             const observer = new MutationObserver(() => {
-                if (this.#corruptionsMatchDOM(targetCorruptions)) { cleanup(true); }
+                if (this.#corruptionsMatchDOM(targetCorruptions)) cleanup(true);
             });
             const timeoutId = window.setTimeout(() => { cleanup(false); }, timeoutMs);
 
@@ -135,13 +129,33 @@ export class HSAutosingCorruption {
         });
     }
 
+    getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
+        if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") return null;
+        if (phaseConfig.corruptionLoadoutName === undefined) return phaseConfig.corruptions ?? null;
+
+        const named = this.#getLoadoutByName(phaseConfig.corruptionLoadoutName);
+        return named ?? phaseConfig.corruptions ?? null;
+    }
+
+    buildLoadoutCache(defs: CorruptionLoadoutDefinition[]): void {
+        this.#loadoutByName.clear();
+        for (const d of defs) {
+            this.#loadoutByName.set(d.name, { ...d.loadout });
+        }
+    }
+    
+    async applyLoadoutByName(name?: string | null): Promise<void> {
+        const loadout = this.#getLoadoutByName(name);
+        if (!loadout) {
+            HSLogger.debug(() => `Loadout not found: ${name ?? "(none)"}`, this.#context);
+            return;
+        }
+        await this.setCorruptions(loadout);
+    }
+
     #getLoadoutByName(name?: string | null): CorruptionLoadout | null {
         if (!name) return null;
         const l = this.#loadoutByName.get(name);
         return l ? { ...l } : null;
-    }
-
-    #stringifyCorruptions(loadout: CorruptionLoadout): string {
-        return CORRUPTION_NAMES.map(name => loadout[name]).join(',');
     }
 }

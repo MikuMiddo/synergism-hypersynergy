@@ -85,14 +85,6 @@ export function getPhaseStandardDeviation(phaseHistory: Map<string, { phaseCount
 }
 
 /**
- * Returns the average C15 value for the last n, given count and mean.
- */
-export function getC15AverageLast(c15Count: number, c15Mean: Decimal, n: number): Decimal | null {
-    if (n <= 0 || c15Count === 0) return null;
-    return c15Mean;
-}
-
-/**
  * Returns the stddev for C15 values, given count and M2.
  */
 export function getC15StdLast(c15Count: number, c15M2: Decimal, n: number): Decimal | null {
