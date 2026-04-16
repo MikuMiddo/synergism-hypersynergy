@@ -16,6 +16,7 @@ import { HSInputType, HSNotifyPosition, HSNotifyType } from "../types/module-typ
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
+import { HSLocalization } from "./hs-core/hs-localization";
 
 /**
  * Class: Hypersynergism
@@ -71,7 +72,9 @@ export class Hypersynergism {
         hsui?.setPanelControlVisible(true);
         HSGlobal.General.isModFullyLoaded = true;
 
-        await HSUI.Notify(`Hypersynergism v${HSGlobal.General.currentModVersion} loaded`, {
+        await HSUI.Notify(HSLocalization.t('hs.tools.loaded', {
+            version: HSGlobal.General.currentModVersion
+        }), {
             position: 'top',
             notificationType: "success"
         });
@@ -110,9 +113,9 @@ export class Hypersynergism {
             this.#buildSettingsTab(hsui);
             this.#buildDebugTab(hsui);
 
-            hsui.renameTab(2, 'Tools');
-            hsui.renameTab(3, 'Settings');
-            hsui.renameTab(4, 'Debug');
+            hsui.renameTab(2, HSLocalization.t('hs.panel.tools'));
+            hsui.renameTab(3, HSLocalization.t('hs.panel.settings'));
+            hsui.renameTab(4, HSLocalization.t('hs.panel.debug'));
         }
     }
 
@@ -152,38 +155,38 @@ export class Hypersynergism {
         hsui.replaceTabContents(2,
             HSUIC.Grid({
                 html: [
-                    this.#buildGridSectionHeader('Export tools'),
-                    this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater.</a>`),
-                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia Heater' }),
-                    this.#buildGridSectionHeader('References'),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: 'Corruption Ref.' }),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: 'Crpt. Onemind' }),
-                    this.#buildGridSectionHeader('Mod links'),
-                    HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: 'Mod Github' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-wiki_features-btn', text: 'Mod Features' }),
-                    HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
-                    this.#buildGridSectionHeader('Other tools'),
-                    HSUIC.Button({ id: 'hs-panel-dump-settings-btn', text: 'Dump Settings' }),
-                    HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: 'Dump Game vars' }),
-                    HSUIC.Button({ id: 'hs-panel-exit-exalt-bug-btn', text: 'Fix Exalt Bug' }),
-                    HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: 'CLEAR SETTINGS', styles: { borderColor: 'red' } }),
-                    this.#buildGridSectionHeader('Testing tools'),
-                    HSUIC.Button({ id: 'hs-panel-test-notify-btn', text: 'Notify test' }),
-                    HSUIC.Button({ id: 'hs-panel-test-notify-long-btn', text: 'Notify test 2' }),
-                    this.#buildGridSectionHeader('Calculation tools'),
-                    this.#buildGridFullSpanDiv('hs-panel-calc-tools-p', `Execute supported calculations and see their results. Calculations denoted with "(C)" support "calculating by components",
-                        meaning that the calculation results can be output as an array of components that make up the calculations.<br><br>
-                        Note that calculating by components always clears the calculation cache first.`),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.exportTools')),
+                    this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `${HSLocalization.t('hs.tools.ambrosiaHeaterDesc')} <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">${HSLocalization.t('hs.tools.ambrosiaHeater')}</a>`),
+                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: HSLocalization.t('hs.tools.ambrosiaHeater') }),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.references')),
+                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: HSLocalization.t('hs.tools.corruptionRef') }),
+                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: HSLocalization.t('hs.tools.corruptionOnemind') }),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.modLinks')),
+                    HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: HSLocalization.t('hs.tools.modGithub') }),
+                    HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: HSLocalization.t('hs.tools.modWiki') }),
+                    HSUIC.Button({ id: 'hs-panel-mod-wiki_features-btn', text: HSLocalization.t('hs.tools.modFeatures') }),
+                    HSUIC.Button({ id: 'hs-panel-check-version-btn', text: HSLocalization.t('hs.tools.checkVersion') }),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.otherTools')),
+                    HSUIC.Button({ id: 'hs-panel-dump-settings-btn', text: HSLocalization.t('hs.tools.dumpSettings') }),
+                    HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: HSLocalization.t('hs.tools.dumpGameData') }),
+                    HSUIC.Button({ id: 'hs-panel-exit-exalt-bug-btn', text: HSLocalization.t('hs.tools.fixExaltBug') }),
+                    HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: HSLocalization.t('hs.tools.clearSettings'), styles: { borderColor: 'red' } }),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.testingTools')),
+                    HSUIC.Button({ id: 'hs-panel-test-notify-btn', text: HSLocalization.t('hs.tools.notifyTest') }),
+                    HSUIC.Button({ id: 'hs-panel-test-notify-long-btn', text: HSLocalization.t('hs.tools.notifyTestLong') }),
+                    this.#buildGridSectionHeader(HSLocalization.t('hs.tools.calculationTools')),
+                    this.#buildGridFullSpanDiv('hs-panel-calc-tools-p', `${HSLocalization.t('hs.tools.calculationDesc')}
+                        <br><br>
+                        ${HSLocalization.t('hs.tools.clearCache')}: ${HSLocalization.t('hs.tools.calculationCacheHint')}`),
                     HSUIC.Select({
                         class: 'hs-panel-setting-block-select-input hs-panel-grid-full-span',
                         id: 'hs-panel-test-calc-sel',
                         type: HSInputType.TEXT
                     }, calculationOptions),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-redu-btn', text: 'Calculate reduced', class: 'hs-panel-btn-auto-width' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-comps-btn', text: 'Calculate components', class: 'hs-panel-btn-auto-width' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-clear-btn', text: 'Clear cache' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-dump-btn', text: 'Dump cache' }),
+                    HSUIC.Button({ id: 'hs-panel-test-calc-redu-btn', text: HSLocalization.t('hs.tools.calculateReduced'), class: 'hs-panel-btn-auto-width' }),
+                    HSUIC.Button({ id: 'hs-panel-test-calc-comps-btn', text: HSLocalization.t('hs.tools.calculateComponents'), class: 'hs-panel-btn-auto-width' }),
+                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-clear-btn', text: HSLocalization.t('hs.tools.clearCache') }),
+                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-dump-btn', text: HSLocalization.t('hs.tools.dumpCache') }),
                     this.#buildGridFullSpanDiv('hs-panel-test-calc-latest', ''),
                 ],
                 styles: {
@@ -217,7 +220,7 @@ export class Hypersynergism {
             const tsv = HSUtils.base64WithCRLF(base64);
             await navigator.clipboard.writeText(tsv);
 
-            HSUI.Notify('Ambrosia heater data copied to clipboard', {
+            HSUI.Notify(HSLocalization.t('hs.tools.heaterCopied'), {
                 position: 'top',
                 notificationType: 'success'
             });
@@ -248,7 +251,7 @@ export class Hypersynergism {
         this.#bindToolsButton('#hs-panel-test-notify-btn', async () => {
             p_idx = (p_idx + 1) % positions.length;
             c_idx = (c_idx + 1) % colors.length;
-            await HSUI.Notify('Test notification', {
+            await HSUI.Notify(HSLocalization.t('hs.tools.notifySample'), {
                 position: positions[p_idx],
                 notificationType: colors[c_idx]
             });
@@ -257,7 +260,7 @@ export class Hypersynergism {
         this.#bindToolsButton('#hs-panel-test-notify-long-btn', async () => {
             p_idx = (p_idx + 1) % positions.length;
             c_idx = (c_idx + 1) % colors.length;
-            await HSUI.Notify('This is a really very extremely long test notification which tests if the notification works with a long notification test notification ', {
+            await HSUI.Notify(HSLocalization.t('hs.tools.notifySampleLong'), {
                 position: positions[p_idx],
                 notificationType: colors[c_idx]
             });
@@ -291,8 +294,8 @@ export class Hypersynergism {
         const isLatest = await HSGithub.isLatestTag();
 
         HSUI.Notify(isLatest
-            ? 'You are using the latest version of Hypersynergism!'
-            : 'You are NOT using the latest version of Hypersynergism!', {
+            ? HSLocalization.t('hs.tools.versionLatest')
+            : HSLocalization.t('hs.tools.versionOutdated'), {
             position: 'top',
             notificationType: isLatest ? 'success' : 'warning'
         });
@@ -362,7 +365,7 @@ export class Hypersynergism {
 
             const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
             if (latestDiv) {
-                latestDiv.innerText = `Last calc result: [${result.toString().split(',').join(', ')}]`;
+                latestDiv.innerText = `${HSLocalization.t('hs.tools.lastCalcResult')}: [${result.toString().split(',').join(', ')}]`;
             }
             console.log(`--- CALCULATED ${calcFnName} ---`);
             console.log(result);
@@ -380,7 +383,7 @@ export class Hypersynergism {
 
         const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
         if (latestDiv) {
-            latestDiv.innerText = `Last calc result: ${HSUtils.N(result)}`;
+            latestDiv.innerText = `${HSLocalization.t('hs.tools.lastCalcResult')}: ${HSUtils.N(result)}`;
         }
     }
 

@@ -1,6 +1,7 @@
 import { HSSettingActionParams, HSSettingBase, HSSettingType } from "../../../types/module-types/hs-settings-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
+import { HSLocalization } from "../hs-localization";
 import { HSLogger } from "../hs-logger";
 import { HSSettings } from "./hs-settings";
 
@@ -107,12 +108,14 @@ export abstract class HSSetting<T extends HSSettingType> {
         }
 
         const targetElement = (e.target as HTMLDivElement);
+        const enabledLabel = HSLocalization.tOrFallback('hs.settings.toggle.on', this.#settingEnabledString);
+        const disabledLabel = HSLocalization.tOrFallback('hs.settings.toggle.off', this.#settingDisabledString);
 
         if (newState) {
-            targetElement.innerText = this.#settingEnabledString;
+            targetElement.innerText = enabledLabel;
             targetElement.classList.remove('hs-disabled');
         } else {
-            targetElement.innerText = this.#settingDisabledString;
+            targetElement.innerText = disabledLabel;
             targetElement.classList.add('hs-disabled');
         }
 
@@ -125,6 +128,8 @@ export abstract class HSSetting<T extends HSSettingType> {
     #handleManualToggle(newState: boolean) {
         const hasStateChanged = this.definition.enabled !== newState;
         if (!hasStateChanged) return;
+        const enabledLabel = HSLocalization.tOrFallback('hs.settings.toggle.on', this.#settingEnabledString);
+        const disabledLabel = HSLocalization.tOrFallback('hs.settings.toggle.off', this.#settingDisabledString);
 
         if (this.definition.settingName === 'useGameData') {
             if (hasStateChanged && !newState) {
@@ -159,10 +164,10 @@ export abstract class HSSetting<T extends HSSettingType> {
 
             if (toggleElement) {
                 if (newState) {
-                    toggleElement.innerText = this.#settingEnabledString;
+                    toggleElement.innerText = enabledLabel;
                     toggleElement.classList.remove('hs-disabled');
                 } else {
-                    toggleElement.innerText = this.#settingDisabledString;
+                    toggleElement.innerText = disabledLabel;
                     toggleElement.classList.add('hs-disabled');
                 }
             } else {

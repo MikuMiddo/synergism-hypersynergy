@@ -1,5 +1,6 @@
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
+import { HSLocalization } from "../hs-localization";
 
 /**
  * Class: HSGithub
@@ -32,7 +33,7 @@ export class HSGithub {
         if (isLatest) {
             HSLogger.log(`Current tag (${HSGithub.currentTag}) is up to date with latest tag (${latestTag}).`, HSGithub.#context);
         } else {
-            HSLogger.log(`New version available: ${latestTag}!`, HSGithub.#context);
+            HSLogger.log(HSLocalization.t('hs.github.newVersionLog', { version: latestTag }), HSGithub.#context);
             HSGithub.#setNewVersionStyle();
         }
 
@@ -151,7 +152,7 @@ export class HSGithub {
         if (modIcon && modPanelHead) {
             modIcon.classList.add('hs-rainbow-border');
             if (!modPanelHead.querySelector('#hs-panel-new-ver')) {
-                modPanelHead.innerHTML += `: <span id="hs-panel-new-ver">New version available!</span>`;
+                modPanelHead.innerHTML += `: <span id="hs-panel-new-ver">${HSLocalization.t('hs.ui.newVersion')}</span>`;
             }
         }
     }

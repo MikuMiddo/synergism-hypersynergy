@@ -3,6 +3,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
 import { HSGameState, MainView } from '../../hs-core/hs-gamestate';
 import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
+import { HSDOMState } from '../../hs-core/hs-dom-state';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -16,7 +17,7 @@ export class HSAutosingSettingsFixer {
      * List of toggle requirements: selector and expected text.
      * Each entry specifies a selector and the text that should be present when ON.
      */
-    static readonly #TOGGLE_REQUIREMENTS: Array<{ selector: string, expected: string }> = [
+    static readonly #TOGGLE_REQUIREMENTS: Array<{ selector: string, expected: string | boolean }> = [
         // Buildings
         { selector: '#toggle1.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
         { selector: '#toggle2.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
@@ -182,11 +183,11 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(toggleReq.selector);
                 continue;
             }
-            if ((toggleElement.textContent || '').trim() !== toggleReq.expected) {
+            if (!HSDOMState.matchesExpected(toggleReq.selector, toggleElement, toggleReq.expected)) {
                 try {
                     toggleElement.click();
                     await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-                    if ((toggleElement.textContent || '').trim() !== toggleReq.expected) {
+                    if (!HSDOMState.matchesExpected(toggleReq.selector, toggleElement, toggleReq.expected)) {
                         failedSelectors.push(toggleReq.selector);
                     } else {
                         correctedSelectors.push(toggleReq.selector);
@@ -371,6 +372,7 @@ export class HSAutosingSettingsFixer {
         // Track which challenge selectors were corrected or failed
         const correctedChallenges: string[] = [];
         const failedChallenges: string[] = [];
+        let player = HSDOMState.getPlayer();
 
         const toggleElement = document.querySelector('#toggleAutoChallengeIgnore') as HTMLElement | null;
         if (!toggleElement) {
@@ -380,8 +382,6 @@ export class HSAutosingSettingsFixer {
 
         // Loop through challenges 1-10 and ensure correct auto state
         for (let challengeIndex = 1; challengeIndex <= 10; challengeIndex++) {
-            const expectedPrefix = `Automatically Run Chal.${challengeIndex}`;
-            const expectedFullText = `${expectedPrefix} [ON]`;
             const challengeElement = document.querySelector(`#challenge${challengeIndex}.challenge`) as HTMLElement | null;
 
             if (!challengeElement) {
@@ -396,8 +396,7 @@ export class HSAutosingSettingsFixer {
                 continue;
             }
             await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-            const toggleText = (toggleElement.textContent || '').trim();
-            if (!toggleText.startsWith(expectedPrefix) || toggleText === expectedFullText) continue;
+            if (HSAutosingSettingsFixer.#isChallengeAutoEnabled(player, challengeIndex, toggleElement)) continue;
 
             try {
                 toggleElement.click();
@@ -407,7 +406,8 @@ export class HSAutosingSettingsFixer {
             }
 
             await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-            if ((toggleElement.textContent || '').trim() !== expectedFullText) {
+            player = HSDOMState.getPlayer();
+            if (!HSAutosingSettingsFixer.#isChallengeAutoEnabled(player, challengeIndex, toggleElement)) {
                 failedChallenges.push(`chal${challengeIndex}`);
             } else {
                 correctedChallenges.push(`chal${challengeIndex}`);
@@ -420,6 +420,15 @@ export class HSAutosingSettingsFixer {
         } else {
             HSLogger.debug(() => `ensureChallengeAutoStates: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
+    }
+
+    static #isChallengeAutoEnabled(player: any, challengeIndex: number, toggleElement: HTMLElement | null): boolean {
+        const playerToggle = player?.autoChallengeToggles?.[challengeIndex - 1];
+        if (typeof playerToggle === 'boolean') {
+            return playerToggle;
+        }
+
+        return HSDOMState.extractToggleState(toggleElement) ?? false;
     }
 
     static async #disableUnwantedSettings(): Promise<string[]> {

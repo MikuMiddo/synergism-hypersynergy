@@ -12,6 +12,7 @@ import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
 import { HSModuleOptions } from "../../types/hs-types";
+import { HSLocalization } from "./hs-localization";
 
 /**
  * Class: HSUI
@@ -58,11 +59,11 @@ export class HSUI extends HSModule {
     readonly #tabConfigMap: Map<number, HSPanelTabDefinition>;
 
     readonly #quickbarSubMenuItems = [
-        { label: 'Ambrosia', btnId: 'hs-setting-qol-ambrosia-quickbar-btn' },
-        { label: 'Amb minibars', btnId: 'hs-setting-ambrosia-minibar-btn' },
-        { label: 'Corruption', btnId: 'hs-setting-qol-enable-corruption-quickbar-btn' },
-        { label: 'Automation', btnId: 'hs-setting-qol-enable-syn-ui-btn' },
-        { label: 'Events', btnId: 'hs-setting-qol-enable-events-quickbar-btn' }
+        { labelKey: 'hs.quick.quickbar.ambrosia', btnId: 'hs-setting-qol-ambrosia-quickbar-btn' },
+        { labelKey: 'hs.quick.quickbar.ambrosiaMinibars', btnId: 'hs-setting-ambrosia-minibar-btn' },
+        { labelKey: 'hs.quick.quickbar.corruption', btnId: 'hs-setting-qol-enable-corruption-quickbar-btn' },
+        { labelKey: 'hs.quick.quickbar.automation', btnId: 'hs-setting-qol-enable-syn-ui-btn' },
+        { labelKey: 'hs.quick.quickbar.events', btnId: 'hs-setting-qol-enable-events-quickbar-btn' }
     ];
 
     #tabs: HSPanelTabDefinition[] = [
@@ -153,6 +154,7 @@ export class HSUI extends HSModule {
 
         // Create temp div, inject UI panel HTML and append the contents to body
         HSUI.injectHTMLString(this.#staticPanelHtml);
+        HSLocalization.localizeInfoHtml();
     }
 
     async #initializePanelElements(): Promise<void> {
@@ -192,7 +194,7 @@ export class HSUI extends HSModule {
                 if (!this.#loggerElement) return;
                 try {
                     await navigator.clipboard.writeText(this.#loggerElement.textContent || '');
-                    HSUI.Notify('Log copied to clipboard!', { notificationType: 'success' });
+                    HSUI.Notify(HSLocalization.t('hs.ui.logCopied'), { notificationType: 'success' });
                 } catch (err) {
                     HSLogger.error('Failed to copy log to clipboard', this.context);
                 }
@@ -299,8 +301,8 @@ export class HSUI extends HSModule {
         const quickMenu = this.#buildQuickAccessMenuContainer();
         const quickbarsSubmenu = this.#buildQuickbarsSubmenu();
         const quickbarsBtn = this.#buildQuickbarsButton();
-        const autoSingBtn = this.#buildQuickAccessButton('autosing', '▶', 'Start Auto-Sing (S256+)', () => this.#toggleAutoSing());
-        const heaterBtn = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater Export', () => this.#triggerHeaterExport());
+        const autoSingBtn = this.#buildQuickAccessButton('autosing', '▶', HSLocalization.t('hs.quick.autosing'), () => this.#toggleAutoSing());
+        const heaterBtn = this.#buildQuickAccessButton('amb-heater', '🔥', HSLocalization.t('hs.quick.heater'), () => this.#triggerHeaterExport());
 
         quickMenu.appendChild(quickbarsSubmenu);
         quickMenu.appendChild(quickbarsBtn);
@@ -323,7 +325,7 @@ export class HSUI extends HSModule {
         quickbarsBtn.setAttribute('data-type', 'quickbars');
         quickbarsBtn.innerHTML = `
             <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">☰</span>
-            <span>Quickbars</span>
+            <span>${HSLocalization.t('hs.quick.quickbars')}</span>
             <span class="quickbars-arrow">&gt;</span>
         `;
 
@@ -337,8 +339,8 @@ export class HSUI extends HSModule {
         quickbarsSubmenu.id = 'hs-quickbars-submenu';
         quickbarsSubmenu.style.display = 'none';
 
-        this.#quickbarSubMenuItems.forEach(({ label, btnId }) => {
-            quickbarsSubmenu.appendChild(this.#createQuickbarToggle(label, btnId));
+        this.#quickbarSubMenuItems.forEach(({ labelKey, btnId }) => {
+            quickbarsSubmenu.appendChild(this.#createQuickbarToggle(HSLocalization.t(labelKey), btnId));
         });
 
         return quickbarsSubmenu;

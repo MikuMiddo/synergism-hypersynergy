@@ -17,6 +17,7 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSStorage } from "../hs-core/hs-storage";
 import { HSUI } from "../hs-core/hs-ui";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
@@ -99,6 +100,10 @@ export class HSAmbrosia extends HSModule
     #berryMinibarsEnabled = false;
     #blueProgressMinibarElement?: HTMLDivElement;
     #redProgressMinibarElement?: HTMLDivElement;
+
+    #snapshotBlueberryLoadouts(): string {
+        return JSON.stringify(HSGlobal.exposedPlayer?.blueberryLoadouts ?? null);
+    }
 
 
     // ==============================================
@@ -912,7 +917,7 @@ export class HSAmbrosia extends HSModule
         const btn = document.createElement('button');
         btn.id = 'hs-ambrosia-extra-btn';
         btn.className = 'ambrosiaLoadoutBtn';
-        btn.textContent = 'Quick Import';
+        btn.textContent = HSLocalization.t('hs.ambrosia.quickImport');
 
         importBtn.parentElement?.insertBefore(
             btn,
@@ -939,7 +944,7 @@ export class HSAmbrosia extends HSModule
             // clipboard length hidden
 
             if (!text || typeof text !== 'string') {
-                HSUI.Notify('Clipboard does not contain valid loadout data', {
+                HSUI.Notify(HSLocalization.t('hs.ambrosia.quickImportInvalidClipboard'), {
                     notificationType: 'warning'
                 });
                 return;
@@ -951,7 +956,9 @@ export class HSAmbrosia extends HSModule
 
             // Validate we have between 1 and 16 loadouts
             if (lines.length === 0 || lines.length > 16) {
-                HSUI.Notify(`Invalid number of loadouts: ${lines.length}. Expected 1 - 16.`, {
+                HSUI.Notify(HSLocalization.t('hs.ambrosia.quickImportInvalidCount', {
+                    count: lines.length
+                }), {
                     notificationType: 'warning'
                 });
                 return;
@@ -961,21 +968,17 @@ export class HSAmbrosia extends HSModule
             const modeToggle = await HSElementHooker.HookElement('#blueberryToggleMode') as HTMLButtonElement;
 
             if (!fileInput) {
-                throw new Error('Import input element not found');
+                throw new Error(HSLocalization.t('hs.ambrosia.importInputMissing'));
             }
 
             if (!modeToggle) {
-                throw new Error('Mode toggle button not found');
+                throw new Error(HSLocalization.t('hs.ambrosia.modeToggleMissing'));
             }
 
-            // Check if we're in SAVE mode and switch to LOAD mode
-            const currentMode = modeToggle.innerText;
-            // blueberry toggle state
+            const initialMode = HSGlobal.exposedPlayer?.blueberryLoadoutMode ?? modeToggle.innerText;
+            const shouldRestoreLoadMode = HSLocalization.isLoadoutModeLoad(initialMode);
 
-            // If the current mode is SAVE, we need to switch to LOAD mode
-            // This is so that the user never accidentally saves a loadout when using the quickbar
-            if (currentMode.includes('LOAD ')) {
-                // switched blueberry mode to LOAD
+            if (!HSLocalization.isLoadoutModeSave(initialMode)) {
                 modeToggle.click();
             }
 
@@ -1013,6 +1016,7 @@ export class HSAmbrosia extends HSModule
                 fileInput.files = dataTransfer.files;
                 // file input set and dispatched
                 const event = new Event('change', { bubbles: true });
+                const beforeSnapshot = this.#snapshotBlueberryLoadouts();
                 fileInput.dispatchEvent(event);
 
                 // Wait for the import alert (the game shows an alert after file selection).
@@ -1058,7 +1062,8 @@ export class HSAmbrosia extends HSModule
                     await HSUtils.sleep(5);
                 }
 
-                const isSuccess = (alertText || '').toLowerCase().includes('tree successfully imported');
+                const afterSnapshot = this.#snapshotBlueberryLoadouts();
+                const isSuccess = beforeSnapshot !== afterSnapshot;
 
                 if (!isSuccess) {
                     const reason = alertText || 'Unknown error';
@@ -1113,17 +1118,26 @@ export class HSAmbrosia extends HSModule
                 importedCount++;
             }
             // summary: imported/skipped/failed
-            modeToggle.click();
+            const finalMode = HSGlobal.exposedPlayer?.blueberryLoadoutMode ?? modeToggle.innerText;
+            if (shouldRestoreLoadMode && !HSLocalization.isLoadoutModeLoad(finalMode)) {
+                modeToggle.click();
+            }
 
             if (failures.length > 0) {
                 const failureSummary = failures.map(f => `#${f.index}: ${f.reason}`).join('; ');
                 // Short user-facing notification; detailed info logged for debugging
-                HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, {
+                HSUI.Notify(HSLocalization.t('hs.ambrosia.quickImportResultPartial', {
+                    imported: importedCount,
+                    failed: failures.length
+                }), {
                     notificationType: 'warning'
                 });
                 HSLogger.debug(() => `Quick Import detailed failures: ${failureSummary}`, this.context);
             } else {
-                HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
+                HSUI.Notify(HSLocalization.t('hs.ambrosia.quickImportResultSuccess', {
+                    imported: importedCount,
+                    skipped: skippedCount
+                }), {
                     notificationType: 'success'
                 });
             }
@@ -1140,7 +1154,7 @@ export class HSAmbrosia extends HSModule
             // Log detailed error context for debugging
             HSLogger.debug(() => `Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
-            HSUI.Notify('Quick Import failed', {
+            HSUI.Notify(HSLocalization.t('hs.ambrosia.quickImportFailed'), {
                 notificationType: 'error'
             });
         } finally {
@@ -1416,7 +1430,7 @@ export class HSAmbrosia extends HSModule
 
         const loadoutIndicator = document.createElement('div') as HTMLDivElement;
         loadoutIndicator.id = HSGlobal.HSAmbrosia.idleSwapIndicatorId;
-        loadoutIndicator.innerText = "IDLE SWAP ENABLED WHILE IN THIS VIEW";
+        loadoutIndicator.innerText = HSLocalization.t('hs.ambrosia.idleSwapEnabled');
 
         HSUI.injectHTMLElement(loadoutIndicator, (element) => {
             const parent = document.querySelector('#singularityAmbrosia') as HTMLElement;

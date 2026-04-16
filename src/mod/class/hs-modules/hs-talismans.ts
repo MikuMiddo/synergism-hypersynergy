@@ -1,6 +1,7 @@
 import { HSModuleOptions } from "../../types/hs-types";
 import { ETalismanFragmentIndex } from "../../types/module-types/hs-talismans-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSSettings } from "../hs-core/settings/hs-settings";
@@ -23,7 +24,15 @@ export class HSTalismans extends HSModule {
     #indexResetTimeoutTime = 3000;
 
     // Mapping from enum values to display names
-    #fragmentNames = ['Yellow', 'White', 'Green', 'Blue', 'Purple', 'Orange', 'Red'];
+    #fragmentNames = [
+        HSLocalization.t('hs.talismans.fragment.yellow'),
+        HSLocalization.t('hs.talismans.fragment.white'),
+        HSLocalization.t('hs.talismans.fragment.green'),
+        HSLocalization.t('hs.talismans.fragment.blue'),
+        HSLocalization.t('hs.talismans.fragment.purple'),
+        HSLocalization.t('hs.talismans.fragment.orange'),
+        HSLocalization.t('hs.talismans.fragment.red')
+    ];
     
     // Mapping from enum values to colors
     #fragmentColors = ['#ffff00', '#ffffff', '#32cd32', '#008b8b', '#dda0dd', '#ffa500', '#ed143d'];
@@ -36,7 +45,7 @@ export class HSTalismans extends HSModule {
         if (this.#enhancedButton) {
             const nextFragment = this.#fragmentNames[this.#currentButtonIndex];
             const nextColor = this.#fragmentColors[this.#currentButtonIndex];
-            this.#enhancedButton.innerHTML = `Cycle BUY<br>(Next: <span style="color: ${nextColor};">${nextFragment}</span>)`;
+            this.#enhancedButton.innerHTML = `${HSLocalization.t('hs.talismans.cycleBuy')}<br>(${HSLocalization.t('hs.talismans.next')}: <span style="color: ${nextColor};">${nextFragment}</span>)`;
         }
     }
 

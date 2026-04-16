@@ -10,6 +10,7 @@ import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSUI } from "../hs-core/hs-ui";
@@ -108,7 +109,7 @@ export class HSQOLButtons extends HSModule {
             if (useOfferingPotionButton) {
                 const clone = useOfferingPotionButton.cloneNode(true) as HTMLElement;
                 clone.id = 'offeringPotionMultiUseButton';
-                clone.textContent = 'CONSUME 10x';
+                clone.textContent = HSLocalization.t('hs.qol.consume10x');
                 clone.addEventListener('click', () => {
                     for (let i = 0; i < 10; i++) useOfferingPotionButton.click();
                 });
@@ -118,7 +119,7 @@ export class HSQOLButtons extends HSModule {
             if (buyOfferingPotionButton) {
                 const clone2 = buyOfferingPotionButton.cloneNode(true) as HTMLElement;
                 clone2.id = 'offeringPotionMultiBuyButton';
-                clone2.textContent = 'BUY 10x';
+                clone2.textContent = HSLocalization.t('hs.qol.buy10x');
                 clone2.addEventListener('click', () => {
                     for (let i = 0; i < 10; i++) {
                         buyOfferingPotionButton.click();
@@ -148,7 +149,7 @@ export class HSQOLButtons extends HSModule {
             if (useObtainiumPotionButton) {
                 const clone = useObtainiumPotionButton.cloneNode(true) as HTMLElement;
                 clone.id = 'obtainiumPotionMultiUseButton';
-                clone.textContent = 'CONSUME 10x';
+                clone.textContent = HSLocalization.t('hs.qol.consume10x');
                 clone.addEventListener('click', () => {
                     for (let i = 0; i < 10; i++) useObtainiumPotionButton.click();
                 });
@@ -158,7 +159,7 @@ export class HSQOLButtons extends HSModule {
             if (buyObtainiumPotionButton) {
                 const clone2 = buyObtainiumPotionButton.cloneNode(true) as HTMLElement;
                 clone2.id = 'obtainiumPotionMultiBuyButton';
-                clone2.textContent = 'BUY 10x';
+                clone2.textContent = HSLocalization.t('hs.qol.buy10x');
                 clone2.addEventListener('click', () => {
                     for (let i = 0; i < 10; i++) {
                         buyObtainiumPotionButton.click();
@@ -188,7 +189,7 @@ export class HSQOLButtons extends HSModule {
         const add10Btn = document.createElement('button');
         add10Btn.id = 'hs-add-10-btn';
         add10Btn.className = 'hs-add-10-btn';
-        add10Btn.textContent = 'Add x10';
+        add10Btn.textContent = HSLocalization.t('hs.qol.add10');
 
         add10Btn.addEventListener('click', async () => {
             addBtn.click();
@@ -343,7 +344,7 @@ export class HSQOLButtons extends HSModule {
         distributor.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
 
         const title = document.createElement('h3');
-        title.textContent = 'GQ Distributor';
+        title.textContent = HSLocalization.t('hs.qol.gqDistributor');
         title.style.margin = '0 0 10px 0';
         distributor.appendChild(title);
 
@@ -421,7 +422,7 @@ export class HSQOLButtons extends HSModule {
         }
 
         const distributeBtn = document.createElement('button');
-        distributeBtn.textContent = 'Distribute';
+        distributeBtn.textContent = HSLocalization.t('hs.qol.distribute');
         distributeBtn.style.marginTop = '10px';
         distributeBtn.style.padding = '5px 15px';
         distributeBtn.style.cursor = 'pointer';
@@ -581,9 +582,19 @@ export class HSQOLButtons extends HSModule {
             for (const id of ids) {
                 current++;
                 const amountToSpend = plannedSpendById.get(id) ?? 0;
-                setStatus(`Buying ${current}/${ids.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
+                setStatus(HSLocalization.t('hs.qol.distributeStatus.buying', {
+                    current,
+                    total: ids.length,
+                    amount: amountToSpend.toLocaleString()
+                }));
 
-                if (amountToSpend <= 0) { setStatus(`Skipped ${current}/${ids.length} (0 GQ)`); continue; }
+                if (amountToSpend <= 0) {
+                    setStatus(HSLocalization.t('hs.qol.distributeStatus.skipped', {
+                        current,
+                        total: ids.length
+                    }));
+                    continue;
+                }
 
                 const btn = document.getElementById(id) as HTMLButtonElement;
                 if (!btn) continue;
@@ -614,7 +625,7 @@ export class HSQOLButtons extends HSModule {
             distributeBtn.disabled = false;
             distributeBtn.style.opacity = '';
             distributeBtn.style.cursor = 'pointer';
-            setStatus('Done!');
+            setStatus(HSLocalization.t('hs.qol.distributeStatus.done'));
             setTimeout(() => setStatus(''), 3000);
         });
         distributor.appendChild(distributeBtn);
@@ -755,7 +766,7 @@ export class HSQOLButtons extends HSModule {
             const child = await HSElementHooker.HookElement('#ambrosiaProgressBar', undefined, 2000);
             const afkSwapperToggle = document.createElement('button');
             afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
-            afkSwapperToggle.textContent = 'Toggle AFK Swapper';
+            afkSwapperToggle.textContent = HSLocalization.t('hs.qol.toggleAfkSwapper');
 
             afkSwapperToggle.addEventListener('click', () => {
                 const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;

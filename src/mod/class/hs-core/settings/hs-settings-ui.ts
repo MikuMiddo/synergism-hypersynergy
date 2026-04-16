@@ -14,6 +14,7 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
+import { HSLocalization } from "../hs-localization";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
 
@@ -111,10 +112,10 @@ export class HSSettingsUI {
 
                     if (toggleElement) {
                         if (setting.enabled) {
-                            toggleElement.innerText = deps.settingEnabledString;
+                            toggleElement.innerText = HSLocalization.t('hs.settings.toggle.on');
                             toggleElement.classList.remove('hs-disabled');
                         } else {
-                            toggleElement.innerText = deps.settingDisabledString;
+                            toggleElement.innerText = HSLocalization.t('hs.settings.toggle.off');
                             toggleElement.classList.add('hs-disabled');
                         }
 
@@ -192,7 +193,7 @@ export class HSSettingsUI {
                 for (const option of filtered) {
                     const opt = document.createElement('option');
                     opt.value = String(option.value);
-                    opt.text = option.text;
+                    opt.text = HSLocalization.localizeLoadoutOptionText(option.text);
                     if (String(option.value) === String(currentValue)) {
                         opt.selected = true;
                     }
@@ -246,10 +247,10 @@ export class HSSettingsUI {
             selectEl.innerHTML = "";
             if (defaultStrategiesOptions.length > 0) {
                 const optgroupDefault = document.createElement('optgroup');
-                optgroupDefault.label = 'Default Strategies';
+                optgroupDefault.label = HSLocalization.t('hs.settings.defaultStrategies');
                 for (const opt of defaultStrategiesOptions) {
                     const option = document.createElement('option');
-                    option.text = opt.text;
+                    option.text = HSLocalization.localizeLoadoutOptionText(opt.text);
                     option.value = String(opt.value);
                     option.setAttribute('data-default', 'true');
                     optgroupDefault.appendChild(option);
@@ -259,10 +260,10 @@ export class HSSettingsUI {
 
             if (userStrategiesOptions.length > 0) {
                 const optgroupUser = document.createElement('optgroup');
-                optgroupUser.label = 'User Strategies';
+                optgroupUser.label = HSLocalization.t('hs.settings.userStrategies');
                 for (const opt of userStrategiesOptions) {
                     const option = document.createElement('option');
-                    option.text = opt.text;
+                    option.text = HSLocalization.localizeLoadoutOptionText(opt.text);
                     option.value = String(opt.value);
                     option.setAttribute('data-default', 'false');
                     optgroupUser.appendChild(option);
@@ -350,7 +351,7 @@ export class HSSettingsUI {
                 props: {
                     style: page.pageColor ? `--hs-panel-subtab-border-color: ${page.pageColor};` : ''
                 },
-                html: page.pageName
+                html: HSLocalization.localizeTabNameByPageKey(String(key), page.pageName)
             }));
         }
 
@@ -387,7 +388,7 @@ export class HSSettingsUI {
                 const controlGroup = controlGroups[controls.controlGroup];
                 pageHTMLs.push(HSUIC.Div({
                     class: 'hs-panel-grid-section-header',
-                    html: controlGroup.groupName
+                    html: HSLocalization.localizeGroupNameByGroupKey(controls.controlGroup, controlGroup.groupName)
                 }));
             }
 
@@ -434,9 +435,10 @@ export class HSSettingsUI {
         if (controls.controlType === 'switch') {
             components.push(this.#buildSettingTextWrapper(setting, controls, gameDataIcon));
         } else if (controls.controlType === 'button') {
+            const description = HSLocalization.localizeSettingDescription(setting.settingName, setting.settingDescription || 'Error: No button text');
             components.push(HSUIC.Button({
                 id: controls.controlId!,
-                text: setting.settingDescription || 'Error: No button text'
+                text: description
             }));
         } else {
             const convertedType = this.#resolveControlTypeInput(controls.controlType);
@@ -488,6 +490,9 @@ export class HSSettingsUI {
 
     static #buildSettingTextWrapper(setting: HSSettingBase<HSSettingType>, controls: HSSettingControl, gameDataIcon: string) {
         const children: string[] = [];
+        const description = HSLocalization.localizeSettingDescription(setting.settingName, setting.settingDescription);
+        const helpText = HSLocalization.localizeSettingHelpText(setting.settingName, setting.settingHelpText ?? '');
+
         if (controls.controlEnabledId) {
             children.push(HSUIC.Button({
                 class: 'hs-panel-setting-block-btn',
@@ -498,8 +503,8 @@ export class HSSettingsUI {
 
         children.push(HSUIC.P({
             class: 'hs-panel-setting-block-text',
-            props: { title: setting.settingHelpText },
-            text: setting.settingDescription
+            props: { title: helpText },
+            text: description
         }));
 
         if (gameDataIcon) {
@@ -538,12 +543,17 @@ export class HSSettingsUI {
                 return null;
             }
 
+            const localizedOptions = controls.selectOptions.map((option) => ({
+                ...option,
+                text: HSLocalization.localizeLoadoutOptionText(option.text)
+            }));
+
             valueRowChildren.push(HSUIC.Select({
                 class: 'hs-panel-setting-block-select-input',
                 id: controls.controlId,
                 type: convertedType,
                 props: controls.props
-            }, controls.selectOptions));
+            }, localizedOptions));
         } else if (convertedType === HSInputType.STATE) {
             valueRowChildren.push(HSUIC.P({
                 class: 'hs-panel-setting-block-state',
@@ -559,36 +569,36 @@ export class HSSettingsUI {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
         if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to delete", { notificationType: "warning" });
+            HSUI.Notify(HSLocalization.t('hs.settings.deleteSelect'), { notificationType: "warning" });
             return;
         }
 
         const control = strategySetting.getDefinition().settingControl;
         if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyDropdownUnavailable'), { notificationType: "error" });
             return;
         }
 
         const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategySelectedMissing'), { notificationType: "error" });
             return;
         }
 
         const strategyName = selectedOption.value.toString();
         const defaultNames = HSSettings.getDefaultStrategyNames();
         if (defaultNames.includes(strategyName)) {
-            HSUI.Notify("You cannot delete default strategies.", { notificationType: "warning" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyCannotDeleteDefault'), { notificationType: "warning" });
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete strategy "${strategyName}"?`)) {
+        if (!confirm(HSLocalization.t('hs.settings.strategyDeleteConfirm', { name: strategyName }))) {
             return;
         }
 
         const saved = HSStrategyManager.deleteStrategyFromStorage(strategyName, "HSSettings");
         if (!saved) {
-            HSUI.Notify("Failed to delete strategy from localStorage", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyDeleteFailed'), { notificationType: "error" });
             return;
         }
 
@@ -599,26 +609,29 @@ export class HSSettingsUI {
             HSSettingsUI.selectAutosingStrategyByName(firstDefault);
         }
 
-        HSUI.Notify(`Strategy "${strategyName}" deleted. Defaulted to ${firstDefault ? '"' + firstDefault + '"' : 'none'}.`, { notificationType: "success" });
+        HSUI.Notify(HSLocalization.t('hs.settings.strategyDeleted', {
+            name: strategyName,
+            fallback: firstDefault ? `"${firstDefault}"` : HSLocalization.t('hs.settings.none')
+        }), { notificationType: "success" });
     }
 
     static async exportSelectedStrategy(): Promise<void> {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
         if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to export", { notificationType: "warning" });
+            HSUI.Notify(HSLocalization.t('hs.settings.exportSelect'), { notificationType: "warning" });
             return;
         }
 
         const control = strategySetting.getDefinition().settingControl;
         if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyDropdownUnavailable'), { notificationType: "error" });
             return;
         }
 
         const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategySelectedMissing'), { notificationType: "error" });
             return;
         }
 
@@ -629,16 +642,16 @@ export class HSSettingsUI {
         }
 
         if (!strategy) {
-            HSUI.Notify("Strategy not found - cannot export", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyNotFound'), { notificationType: "error" });
             return;
         }
 
         try {
             const strategyJson = JSON.stringify(strategy, null, 2);
             await navigator.clipboard.writeText(strategyJson);
-            HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, { notificationType: "success" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyCopied', { name: strategyName }), { notificationType: "success" });
         } catch {
-            HSUI.Notify("Failed to copy strategy to clipboard", { notificationType: "error" });
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyCopyFailed'), { notificationType: "error" });
         }
     }
 
@@ -646,20 +659,20 @@ export class HSSettingsUI {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (uiMod) {
             const modalId = await uiMod.Modal({
-                title: 'Import Strategy',
+                title: HSLocalization.t('hs.settings.importStrategy'),
                 htmlContent: `
             <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
                 <div>
-                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy Name:</label>
-                    <input type="text" id="import-strategy-name" placeholder="Enter strategy name" style="width: 100%; padding: 8px; box-sizing: border-box;" />
+                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">${HSLocalization.t('hs.settings.strategyName')}:</label>
+                    <input type="text" id="import-strategy-name" placeholder="${HSLocalization.t('hs.settings.enterStrategyName')}" style="width: 100%; padding: 8px; box-sizing: border-box;" />
                 </div>
                 <div>
-                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy JSON:</label>
-                    <textarea id="import-strategy-json" placeholder="Paste strategy JSON here" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
+                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">${HSLocalization.t('hs.settings.strategyJson')}:</label>
+                    <textarea id="import-strategy-json" placeholder="${HSLocalization.t('hs.settings.pasteStrategyJson')}" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button id="import-strategy-cancel" data-close="${'modal-will-be-replaced'}" style="padding: 8px 16px; cursor: pointer;">Cancel</button>
-                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">Import</button>
+                    <button id="import-strategy-cancel" data-close="${'modal-will-be-replaced'}" style="padding: 8px 16px; cursor: pointer;">${HSLocalization.t('hs.settings.cancel')}</button>
+                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">${HSLocalization.t('hs.settings.import')}</button>
                 </div>
             </div>
         `
@@ -690,7 +703,7 @@ export class HSSettingsUI {
             });
 
             if (!submitBtn || !nameInput || !jsonInput) {
-                HSUI.Notify("Failed to create import modal", {
+                HSUI.Notify(HSLocalization.t('hs.settings.importModalFailed'), {
                     notificationType: "error"
                 });
                 return;
@@ -701,7 +714,7 @@ export class HSSettingsUI {
                 const strategyJson = jsonInput.value.trim();
 
                 if (!strategyName) {
-                    HSUI.Notify("Please enter a strategy name", {
+                    HSUI.Notify(HSLocalization.t('hs.settings.enterStrategyNameWarn'), {
                         notificationType: "warning"
                     });
                     return;
@@ -709,7 +722,7 @@ export class HSSettingsUI {
 
                 const existingStrategies = HSSettings.getStrategies();
                 if (existingStrategies.some(s => s.strategyName === strategyName)) {
-                    HSUI.Notify(`Strategy "${strategyName}" already exists`, {
+                    HSUI.Notify(HSLocalization.t('hs.settings.strategyAlreadyExists', { name: strategyName }), {
                         notificationType: "warning"
                     });
                     return;
@@ -719,7 +732,7 @@ export class HSSettingsUI {
                 try {
                     parsedStrategy = JSON.parse(strategyJson);
                 } catch (error) {
-                    HSUI.Notify("Invalid JSON format", {
+                    HSUI.Notify(HSLocalization.t('hs.settings.invalidJson'), {
                         notificationType: "error"
                     });
                     return;
@@ -731,14 +744,14 @@ export class HSSettingsUI {
                 try {
                         const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
                         if (!saved) {
-                            HSUI.Notify("Failed to save strategy", {
+                            HSUI.Notify(HSLocalization.t('hs.settings.saveStrategyFailed'), {
                                 notificationType: "error"
                             });
                             return;
                         }
                     HSSettingsUI.selectAutosingStrategyByName(strategyName);
                     HSLogger.log(`Strategy "${strategyName}" imported and selected.`, "HSSettings");
-                    HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
+                    HSUI.Notify(HSLocalization.t('hs.settings.strategyImported', { name: strategyName }), {
                         notificationType: "success"
                     });
 
@@ -748,14 +761,14 @@ export class HSSettingsUI {
                         modal.parentElement?.removeChild(modal);
                     }
                 } catch (error) {
-                    HSUI.Notify("Failed to save strategy", {
+                    HSUI.Notify(HSLocalization.t('hs.settings.saveStrategyFailed'), {
                         notificationType: "error"
                     });
                     HSLogger.log(`Strategy import failed: ${error}`, "HSSettings");
                 }
             });
         } else {
-            HSUI.Notify("Failed to find HSUI", {
+            HSUI.Notify(HSLocalization.t('hs.settings.findHsUiFailed'), {
                 notificationType: "error"
             });
         }
@@ -766,7 +779,7 @@ export class HSSettingsUI {
         const selectedValue = strategySetting.getValue();
 
         if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to edit", {
+            HSUI.Notify(HSLocalization.t('hs.settings.editSelect'), {
                 notificationType: "warning"
             });
             return;
@@ -790,7 +803,7 @@ export class HSSettingsUI {
         }
 
         if (!strategy) {
-            HSUI.Notify("Strategy not found - Cannot edit", {
+            HSUI.Notify(HSLocalization.t('hs.settings.strategyEditNotFound'), {
                 notificationType: "error"
             });
             return;

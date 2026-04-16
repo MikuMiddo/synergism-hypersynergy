@@ -1,8 +1,10 @@
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
+import { HSDOMState } from "../hs-core/hs-dom-state";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
+import { HSLocalization } from "../hs-core/hs-localization";
 
 type AutomationSelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: AutomationSelectorExpectation };
@@ -255,34 +257,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
      * This function is intentionally tolerant of multiple UI representations.
      */
     #isElementOn(el: HTMLElement | null): boolean {
-        if (!el) return false;
-        try {
-            const ariaPressed = el.getAttribute('aria-pressed');
-            if (ariaPressed === 'true') return true;
-            const ariaChecked = el.getAttribute('aria-checked');
-            if (ariaChecked === 'true') return true;
-            // Text-based heuristics: look for common status markers
-            const text = (el.textContent || '').trim();
-            if (/Auto\s+Open\s*\[OFF\]/i.test(text)) return false;
-            if (/Auto\s+Open\s*\[(ON|OFF)\]/i.test(text)) return /\[ON\]/i.test(text);
-            if (/Auto\s+Open\s*"?\d+%"?/i.test(text)) return true;
-
-            // Matches like "Open Cubes: [ON]"
-            const openMatch = text.match(/Open\s+(Cubes|Tesseracts|Hypercubes|Platonic)\s*:?\s*\[(ON|OFF)\]/i);
-            if (openMatch) return openMatch[2].toUpperCase() === 'ON';
-
-            // Generic auto-upgrade markers
-            if (/Auto\s+Upgrades:\s*\[ON\]/i.test(text)) return true;
-            if (/Auto\s+Upgrades:\s*\[OFF\]/i.test(text)) return false;
-
-            // Class-name or inline text hints
-            const cls = el.className || '';
-            if (/\b(on|enabled|active)\b/i.test(cls)) return true;
-            if (/\bON\b/i.test(text) || /enabled/i.test(text)) return true;
-        } catch (e) {
-            HSLogger.log(`isElementOn check failed: ${e}`, this.context);
-        }
-        return false;
+        return HSDOMState.isElementOn('', el);
     }
 
     /** Normalize toggle text by collapsing whitespace for stable comparisons. */
@@ -339,17 +314,11 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         // Build matcher according to expected contract
         if (expected === undefined || expected === 'ON') {
-            matcher = (el: HTMLElement | null) => this.#isElementOn(el);
+            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, true);
         } else if (expected === 'OFF') {
-            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
+            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, false);
         } else {
-            // expected contains a literal text to compare against element text
-            const expectedText = this.#normalizeToggleText(expected);
-            matcher = (el: HTMLElement | null) => {
-                if (!el) return false;
-                const currentText = this.#normalizeToggleText(el.textContent || '');
-                return currentText === expectedText;
-            };
+            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, expected);
         }
 
         this.#selectorMatcherCache.set(matcherKey, matcher);
@@ -540,8 +509,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 img.loading = 'lazy';
                 btn.appendChild(img);
 
-                btn.title = config.label;
-                btn.setAttribute('aria-label', config.label);
+                const localizedLabel = HSLocalization.localizeAutomationLabel(toggleKey, config.label);
+                btn.title = localizedLabel;
+                btn.setAttribute('aria-label', localizedLabel);
                 btn.addEventListener('click', () => {
                     const target = this.#getVisibleAutomationElement(config.actionDOM, config)
                         ?? compiledChecks
@@ -603,8 +573,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             const btn = this.#createAutomationGroupButton(
                 config.selectors,
                 config,
-                config.label,
-                config.label,
+                HSLocalization.localizeAutomationLabel(toggleKey, config.label),
+                HSLocalization.localizeAutomationLabel(toggleKey, config.label),
                 config.iconSrc,
                 requestAutomationUpdateUI
             );

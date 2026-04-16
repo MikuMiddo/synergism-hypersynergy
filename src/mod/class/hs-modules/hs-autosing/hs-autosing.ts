@@ -15,9 +15,24 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
-const STAGE_REGEX = /Current Game Section:\s*(.+)/;
+const STAGE_REGEX = /(?:Current Game Section|当前游戏阶段)\s*[:：]\s*(.+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
 const SKIP_INITIAL_ASCEND_OPTS = { skipInitialAscend: true } as const;
+
+const normalizeStageText = (raw: string): string => {
+    const text = raw.trim();
+    const prefixedMatch = text.match(STAGE_REGEX);
+    if (prefixedMatch?.[1]) {
+        return prefixedMatch[1].trim();
+    }
+
+    const colonMatch = text.match(/[:：]\s*(.+)$/);
+    if (colonMatch?.[1]) {
+        return colonMatch[1].trim();
+    }
+
+    return text;
+};
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -1188,9 +1203,9 @@ export class HSAutosing extends HSModule {
 
             try {
                 const raw = this.#stage?.textContent ?? '';
-                const m = raw.match(STAGE_REGEX);
-                if (m && m[1]) {
-                    return m[1].trim();
+                const parsedStage = normalizeStageText(raw);
+                if (parsedStage) {
+                    return parsedStage;
                 }
             } catch (e) { HSLogger.warn(`Error reading stage element: ${e}`, this.context); }
 
@@ -1205,8 +1220,8 @@ export class HSAutosing extends HSModule {
         this.#misc.click();
 
         const stageText = await this.#getFromDOM<string>(this.#stage, {
-            regex: STAGE_REGEX,
-            predicate: t => t.includes("Current Game Section:")
+            parser: (text) => normalizeStageText(text),
+            predicate: t => /Current Game Section|当前游戏阶段|[:：]/.test(t)
         });
 
         return stageText || "";

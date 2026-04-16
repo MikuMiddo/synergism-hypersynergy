@@ -14,6 +14,7 @@ import { HSGlobal } from "../hs-global";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSSettingsUIDependencies } from "./hs-settings-ui";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { HSLocalization } from "../hs-localization";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
 type StringIndexedObject = Record<string, unknown>;
@@ -39,8 +40,8 @@ export class HSSettings extends HSModule {
     static #settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
     static #settingsParsed = false;
     static #saveTimeout: ReturnType<typeof setTimeout> | undefined;
-    static #settingEnabledString = "✓";
-    static #settingDisabledString = "✗";
+    static #settingEnabledString = HSLocalization.t('hs.settings.toggle.on');
+    static #settingDisabledString = HSLocalization.t('hs.settings.toggle.off');
 
     #settingActions: HSSettingActions;
 
@@ -193,6 +194,9 @@ export class HSSettings extends HSModule {
     }
 
     static #getUIDependencies(): HSSettingsUIDependencies {
+        HSSettings.#settingEnabledString = HSLocalization.t('hs.settings.toggle.on');
+        HSSettings.#settingDisabledString = HSLocalization.t('hs.settings.toggle.off');
+
         return {
             settingsParsed: HSSettings.#settingsParsed,
             settings: HSSettings.#settings,
@@ -343,7 +347,7 @@ export class HSSettings extends HSModule {
 
                         if (!hasDefaultOption) {
                             settingControl.selectOptions.unshift({
-                                text: "None",
+                                text: HSLocalization.t('hs.settings.none'),
                                 value: ""
                             });
                         }

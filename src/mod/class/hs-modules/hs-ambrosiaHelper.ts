@@ -1,4 +1,6 @@
 import { AMBROSIA_ICON, AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
+import { HSGlobal } from "../hs-core/hs-global";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
@@ -74,10 +76,10 @@ export class HSAmbrosiaHelper {
         const modeButton = await HSElementHooker.HookElement('#blueberryToggleMode') as HTMLButtonElement;
 
         if (modeButton) {
-            const currentMode = modeButton.innerText;
+            const currentMode = HSGlobal.exposedPlayer?.blueberryLoadoutMode ?? modeButton.innerText;
 
             // If we're in SAVE mode, toggle to LOAD mode.
-            if (currentMode.includes('SAVE')) {
+            if (HSLocalization.isLoadoutModeSave(currentMode)) {
                 modeButton.click();
             }
         }

@@ -2,6 +2,7 @@ import { AMBROSIA_ICON, HSAmbrosiaLoadoutIcon } from "../../types/module-types/h
 import { HSViewProperties, MAIN_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { IHSGlobal } from "../../types/module-types/hs-global-types";
 import { ELogLevel } from "../../types/module-types/hs-logger-types";
+import { HSLocalization } from "./hs-localization";
 
 // Build-time injected by esbuild via `define`.
 declare const HS_BUILD_VERSION: string;
@@ -129,7 +130,9 @@ export const HSGlobal: IHSGlobal = class {
             'patchConfig',
             'usesGameData',
         ],
-        gameDataRequiredTooltip: 'This feature requires Game Data Sniffing to be enabled.',
+        get gameDataRequiredTooltip() {
+            return HSLocalization.t('hs.gamedata.required');
+        },
 
         // When game data is disabled, we will auto-disable all features that use it
         // This blacklist is to ensure that auto-disable ignores these features even if they use game data
