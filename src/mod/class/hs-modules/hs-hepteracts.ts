@@ -2,6 +2,7 @@ import { CUBE_VIEW, MAIN_VIEW } from "../../types/module-types/hs-gamestate-type
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameState } from "../hs-core/hs-gamestate";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSDOMState } from "../hs-core/hs-dom-state";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
@@ -70,9 +71,9 @@ export class HSHepteracts extends HSModule {
 
     #ratioElementHtml = `
         <div id="hs-ratio-container">
-            <div class="hs-ratio" id="hs-ratio-a">CHR/HYP/CHL: 1 / 123 / 123</div>
-            <div class="hs-ratio" id="hs-ratio-b">ACC/BST/MLT: 1 / 123 / 123</div>
-            <div class="hs-ratio" id="hs-ratio-c">CHR/ACC: 1 / 123</div>
+            <div class="hs-ratio" id="hs-ratio-a">${HSLocalization.t('hs.hepteracts.ratioA', { chronos: 1, hyper: 123 })}</div>
+            <div class="hs-ratio" id="hs-ratio-b">${HSLocalization.t('hs.hepteracts.ratioB', { accelerator: 1, boost: 123 })}</div>
+            <div class="hs-ratio" id="hs-ratio-c">${HSLocalization.t('hs.hepteracts.ratioC', { chronos: 1 })}</div>
         </div>`;
     
     #ratioElementStyle = `
@@ -490,9 +491,17 @@ export class HSHepteracts extends HSModule {
                             self.#chronosToAcceleratorRatio = Math.round(self.#boxCounts.chronosHepteract / self.#boxCounts.acceleratorHepteract);
 
                             if(this.#ratioElementA && this.#ratioElementB && this.#ratioElementC) {
-                                this.#ratioElementA.innerText = `CHR/HYP/CHL: ${HSUtils.N(self.#chronosToChallengeRatio, 0)} / ${HSUtils.N(self.#hyperToChallengeRatio, 0)} / 1`;
-                                this.#ratioElementB.innerText = `ACC/BST/MLT: ${HSUtils.N(self.#acceleratorToMultiplierRatio, 0)} / ${HSUtils.N(self.#boostToMultiplierRatio, 0)} / 1`;
-                                this.#ratioElementC.innerText = `CHR/ACC: ${HSUtils.N(self.#chronosToAcceleratorRatio, 0)} / 1`;
+                                this.#ratioElementA.innerText = HSLocalization.t('hs.hepteracts.ratioA', {
+                                    chronos: HSUtils.N(self.#chronosToChallengeRatio, 0),
+                                    hyper: HSUtils.N(self.#hyperToChallengeRatio, 0)
+                                });
+                                this.#ratioElementB.innerText = HSLocalization.t('hs.hepteracts.ratioB', {
+                                    accelerator: HSUtils.N(self.#acceleratorToMultiplierRatio, 0),
+                                    boost: HSUtils.N(self.#boostToMultiplierRatio, 0)
+                                });
+                                this.#ratioElementC.innerText = HSLocalization.t('hs.hepteracts.ratioC', {
+                                    chronos: HSUtils.N(self.#chronosToAcceleratorRatio, 0)
+                                });
                             }
                         }
                     } else {
@@ -585,16 +594,30 @@ export class HSHepteracts extends HSModule {
                 costText.id = 'hs-costText';
 
                 if(isQuarkHepteract)
-                    costText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
+                    costText.innerText = HSLocalization.t('hs.hepteracts.costQuark', {
+                        context: this.context,
+                        cost: HSUtils.N(buyCost)
+                    });
                 else
-                    costText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
+                    costText.innerText = HSLocalization.t('hs.hepteracts.costHept', {
+                        context: this.context,
+                        cost: HSUtils.N(buyCost),
+                        percent: persOwn
+                    });
 
                 this.#hepteractCraftTexts.appendChild(costText);
             } else {
                 if(isQuarkHepteract)
-                    hasCostText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
+                    hasCostText.innerText = HSLocalization.t('hs.hepteracts.costQuark', {
+                        context: this.context,
+                        cost: HSUtils.N(buyCost)
+                    });
                 else
-                    hasCostText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
+                    hasCostText.innerText = HSLocalization.t('hs.hepteracts.costHept', {
+                        context: this.context,
+                        cost: HSUtils.N(buyCost),
+                        percent: persOwn
+                    });
             }
         }
     }

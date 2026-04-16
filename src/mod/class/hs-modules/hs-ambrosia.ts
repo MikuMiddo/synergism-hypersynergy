@@ -1066,7 +1066,7 @@ export class HSAmbrosia extends HSModule
                 const isSuccess = beforeSnapshot !== afterSnapshot;
 
                 if (!isSuccess) {
-                    const reason = alertText || 'Unknown error';
+                    const reason = alertText || HSLocalization.t('hs.ambrosia.unknownError');
                     failures.push({ index: i + 1, reason });
                     // record failure for later reporting
 
@@ -1148,7 +1148,7 @@ export class HSAmbrosia extends HSModule
                     ? err.message
                     : typeof err === 'string'
                         ? err
-                        : 'Unknown error';
+                        : HSLocalization.t('hs.ambrosia.unknownError');
 
             HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
             // Log detailed error context for debugging

@@ -1,5 +1,6 @@
 import { HSUI } from "../../../hs-core/hs-ui";
 import { AOAG_PHASE_NAME, CorruptionLoadout, CorruptionLoadoutDefinition, HSAutosingStrategy } from "../../../../types/module-types/hs-autosing-types";
+import { HSLocalization } from "../../../hs-core/hs-localization";
 import viscosity from "../../../../resource/txt/viscosity_icon.txt";
 import drought from "../../../../resource/txt/drought_icon.txt";
 import deflation from "../../../../resource/txt/deflation_icon.txt";
@@ -49,11 +50,11 @@ const findLoadoutUsages = (strategy: HSAutosingStrategy, name: string): string[]
 
     strategy.strategy.forEach(phase => {
         if (phase.corruptionLoadoutName === name) {
-            usages.push(`Phase ${phase.startPhase}-${phase.endPhase}`);
+            usages.push(HSLocalization.t('hs.autosing.corruption.usage.phase', { range: `${phase.startPhase}-${phase.endPhase}` }));
         }
         phase.strat.forEach(entry => {
             if (entry.loadoutName === name) {
-                usages.push(`Action in ${phase.startPhase}-${phase.endPhase}`);
+                usages.push(HSLocalization.t('hs.autosing.corruption.usage.action', { range: `${phase.startPhase}-${phase.endPhase}` }));
             }
         });
     });
@@ -64,7 +65,7 @@ const findLoadoutUsages = (strategy: HSAutosingStrategy, name: string): string[]
         }
         strategy.aoagPhase.strat.forEach(entry => {
             if (entry.loadoutName === name) {
-                usages.push(`Action in ${AOAG_PHASE_NAME}`);
+                usages.push(HSLocalization.t('hs.autosing.corruption.usage.action', { range: AOAG_PHASE_NAME }));
             }
         });
     }
@@ -126,12 +127,12 @@ const openCorruptionLoadoutEditorModal = async (
         htmlContent: `
             <div id="${modalId}" class="hs-corruption-modal-container">
                 <div class="hs-strategy-input-section">
-                    <div class="hs-strategy-input-label">Loadout Name</div>
+                    <div class="hs-strategy-input-label">${HSLocalization.t('hs.autosing.corruption.loadoutName')}</div>
                     <input
                         type="text"
                         id="hs-corruption-loadout-name"
                         class="hs-strategy-name-input"
-                        placeholder="Enter loadout name..."
+                        placeholder="${HSLocalization.t('hs.autosing.corruption.enterLoadoutName')}"
                         value="${originalName}"
                     />
                 </div>
@@ -141,15 +142,15 @@ const openCorruptionLoadoutEditorModal = async (
                 <div class="hs-strategy-error" id="hs-corruption-loadout-editor-error" style="display:none;"></div>
                 <div class="hs-corruption-footer">
                     <div class="hs-corruption-done-btn" id="hs-corruption-loadout-save-btn">
-                        ${isEdit ? "Save" : "Create"}
+                        ${isEdit ? HSLocalization.t('hs.autosing.corruption.save') : HSLocalization.t('hs.autosing.corruption.create')}
                     </div>
                     <div class="hs-corruption-done-btn" id="hs-corruption-loadout-cancel-btn">
-                        Cancel
+                        ${HSLocalization.t('hs.autosing.corruption.cancel')}
                     </div>
                 </div>
             </div>
         `,
-        title: isEdit ? "Edit Corruption Loadout" : "Create Corruption Loadout"
+        title: isEdit ? HSLocalization.t('hs.autosing.corruption.editTitle') : HSLocalization.t('hs.autosing.corruption.createTitle')
     };
 
     const modalInstance = await uiMod.Modal({
@@ -173,7 +174,7 @@ const openCorruptionLoadoutEditorModal = async (
 
                 if (!nameValue) {
                     if (errorBox) {
-                        errorBox.textContent = "Loadout name is required.";
+                        errorBox.textContent = HSLocalization.t('hs.autosing.corruption.nameRequired');
                         errorBox.style.display = "block";
                     }
                     return;
@@ -182,7 +183,7 @@ const openCorruptionLoadoutEditorModal = async (
                 const nameTaken = existingNames.some(name => name === nameValue && name !== originalName);
                 if (nameTaken) {
                     if (errorBox) {
-                        errorBox.textContent = `Loadout name "${nameValue}" already exists.`;
+                        errorBox.textContent = HSLocalization.t('hs.autosing.corruption.nameExists', { name: nameValue });
                         errorBox.style.display = "block";
                     }
                     return;
@@ -222,7 +223,7 @@ export async function openAutosingCorruptionLoadoutsModal(
         if (!container) return;
 
         if (loadouts.length === 0) {
-            container.innerHTML = '<div class="hs-strategy-empty-state">No corruption loadouts created yet.</div>';
+            container.innerHTML = `<div class="hs-strategy-empty-state">${HSLocalization.t('hs.autosing.corruption.empty')}</div>`;
             return;
         }
 
@@ -245,21 +246,21 @@ export async function openAutosingCorruptionLoadoutsModal(
         htmlContent: `
             <div class="hs-strategy-modal-container" id="${modalId}">
                 <div class="hs-strategy-input-section">
-                    <div class="hs-strategy-input-label">Corruption Loadouts</div>
+                    <div class="hs-strategy-input-label">${HSLocalization.t('hs.autosing.corruption.managerLabel')}</div>
                     <div id="hs-corruption-loadout-list" class="hs-strategy-phase-list"></div>
                 </div>
                 <div class="hs-strategy-error" id="hs-corruption-loadout-error" style="display:none;"></div>
                 <div class="hs-strategy-btn-group">
                     <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-corruption-loadout-create">
-                        + Create Loadout
+                        ${HSLocalization.t('hs.autosing.corruption.createButton')}
                     </div>
                     <div class="hs-strategy-btn hs-strategy-btn-primary" id="hs-corruption-loadout-done">
-                        Done
+                        ${HSLocalization.t('hs.autosing.corruption.done')}
                     </div>
                 </div>
             </div>
         `,
-        title: "Corruption Loadouts"
+        title: HSLocalization.t('hs.autosing.corruption.managerTitle')
     };
 
     const modalInstance = await uiMod.Modal({
@@ -317,7 +318,10 @@ export async function openAutosingCorruptionLoadoutsModal(
                 const loadout = loadouts[index];
                 const usages = findLoadoutUsages(strategy, loadout.name);
                 if (usages.length > 0) {
-                    showError(`Cannot delete loadout "${loadout.name}". In use by: ${usages.join(", ")}.`);
+                    showError(HSLocalization.t('hs.autosing.corruption.deleteBlocked', {
+                        name: loadout.name,
+                        usages: usages.join(", ")
+                    }));
                     return;
                 }
                 loadouts.splice(index, 1);

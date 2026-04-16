@@ -1,5 +1,6 @@
 import { HSUI } from "../../../hs-core/hs-ui";
 import { CorruptionLoadoutDefinition } from "../../../../types/module-types/hs-autosing-types";
+import { HSLocalization } from "../../../hs-core/hs-localization";
 
 export async function openAutosingCorruptionModal(
     uiMod: HSUI,
@@ -23,7 +24,7 @@ export async function openAutosingCorruptionModal(
                 </label>
             `;
         }).join("")
-        : `<div class="hs-corruption-empty">No corruption loadouts created yet.</div>`;
+        : `<div class="hs-corruption-empty">${HSLocalization.t('hs.autosing.corruption.empty')}</div>`;
 
     const noneChecked = selectedName === "" ? "checked" : "";
 
@@ -33,18 +34,18 @@ export async function openAutosingCorruptionModal(
                 <div class="hs-corruption-list">
                     <label class="hs-corruption-loadout-item">
                         <input type="radio" name="hs-corruption-loadout" value="" ${noneChecked} />
-                        <span class="hs-corruption-loadout-name">None</span>
+                        <span class="hs-corruption-loadout-name">${HSLocalization.t('hs.autosing.corruption.none')}</span>
                     </label>
                     ${loadoutRows}
                 </div>
                 <div class="hs-corruption-footer">
                     <div class="hs-corruption-done-btn" id="hs-corruption-save-btn">
-                        Done
+                        ${HSLocalization.t('hs.autosing.corruption.done')}
                     </div>
                 </div>
             </div>
         `,
-        title: "Select Corruption Loadout"
+        title: HSLocalization.t('hs.autosing.corruption.selectTitle')
     };
 
     const modalInstance = await uiMod.Modal({

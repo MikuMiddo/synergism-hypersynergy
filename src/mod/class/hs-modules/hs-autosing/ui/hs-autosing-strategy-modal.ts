@@ -8,6 +8,7 @@ import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
+import { HSLocalization } from '../../../hs-core/hs-localization';
 
 /**
  * Class: HSAutosingStrategyModal
@@ -95,7 +96,7 @@ export class HSAutosingStrategyModal {
                 : '';
 
             const phaseHtml = strategyDraft.strategy.length === 0
-                ? '<div class="hs-strategy-empty-state">No strategy phases added yet.</div>'
+                ? `<div class="hs-strategy-empty-state">${HSLocalization.t('hs.autosing.strategy.empty')}</div>`
                 : strategyDraft.strategy
                     .map((p, i) => `
                         <div class="hs-strategy-phase-item">
@@ -119,24 +120,24 @@ export class HSAutosingStrategyModal {
             htmlContent: `
                 <div class="hs-strategy-modal-container" id="hs-strategy-modal-root">
                     <div class="hs-strategy-input-section">
-                        <div class="hs-strategy-input-label">Strategy Name</div>
+                        <div class="hs-strategy-input-label">${HSLocalization.t('hs.autosing.strategy.strategyName')}</div>
                         <input 
                             type="text" 
                             id="hs-autosing-strategy-name" 
                             class="hs-strategy-name-input"
-                            placeholder="Enter strategy name..."
+                            placeholder="${HSLocalization.t('hs.autosing.strategy.enterName')}"
                             value="${strategyDraft.strategyName}"
                             ${isEditMode ? 'disabled style="background:#000;color:#888;cursor:not-allowed;"' : ''}
                         />
                         ${isDuplicateMode
-                    ? '<div class="hs-strategy-note" style="margin-top: 6px; opacity: 0.8; font-size: 12px;">Default strategies are read-only; saving creates a user copy.</div>'
+                    ? `<div class="hs-strategy-note" style="margin-top: 6px; opacity: 0.8; font-size: 12px;">${HSLocalization.t('hs.autosing.strategy.readOnlyNote')}</div>`
                     : ''}
                     </div>
 
                     <div class="hs-strategy-input-section">
-                        <div class="hs-strategy-input-label">Strategy Phases</div>
+                        <div class="hs-strategy-input-label">${HSLocalization.t('hs.autosing.strategy.phases')}</div>
                         <div id="hs-autosing-phase-list" class="hs-strategy-phase-list">
-                            <div class="hs-strategy-empty-state">No strategy phases added yet.</div>
+                            <div class="hs-strategy-empty-state">${HSLocalization.t('hs.autosing.strategy.empty')}</div>
                         </div>
                     </div>
 
@@ -144,20 +145,24 @@ export class HSAutosingStrategyModal {
 
                     <div class="hs-strategy-btn-group">
                         <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-loadouts-btn">
-                            Create Corruption Loadouts
+                            ${HSLocalization.t('hs.autosing.strategy.createLoadouts')}
                         </div>
                         <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-add-phase-btn">
-                            + Add Phase
+                            ${HSLocalization.t('hs.autosing.strategy.addPhase')}
                         </div>
                         <div class="hs-strategy-btn hs-strategy-btn-primary" id="hs-autosing-create-btn">
-                            ${isEditMode ? 'Update Strategy' : (isDuplicateMode ? 'Save as a new Strategy' : 'Create Strategy')}
+                            ${isEditMode
+                    ? HSLocalization.t('hs.autosing.strategy.update')
+                    : (isDuplicateMode
+                        ? HSLocalization.t('hs.autosing.strategy.saveAsNew')
+                        : HSLocalization.t('hs.autosing.strategy.create'))}
                         </div>
                     </div>
                 </div>
             `,
             title: isEditMode
-                ? "Edit Autosing Strategy"
-                : (isDuplicateMode ? "View / Copy Default Strategy" : "Create Autosing Strategy"),
+                ? HSLocalization.t('hs.autosing.strategy.editTitle')
+                : (isDuplicateMode ? HSLocalization.t('hs.autosing.strategy.copyTitle') : HSLocalization.t('hs.autosing.strategy.createTitle')),
             parentModalId: options?.parentModalId
         };
 
@@ -191,27 +196,32 @@ export class HSAutosingStrategyModal {
                 } else if (el.id === "hs-autosing-create-btn") {
                     const errorBox = document.getElementById("hs-strategy-error");
                     const nameInput = document.getElementById("hs-autosing-strategy-name") as HTMLInputElement;
-                    strategyDraft.strategyName = nameInput?.value || "Unnamed Strategy";
+                    strategyDraft.strategyName = nameInput?.value || HSLocalization.t('hs.autosing.strategy.unnamed');
                     try {
                         if (isEditMode) {
                             const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName, context);
                             if (!saved) {
-                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                HSUI.Notify(HSLocalization.t('hs.autosing.strategy.failedSave'), { notificationType: "error" });
                                 return;
                             }
                             HSSettingsUI.updateStrategyDropdownList();
                             HSSettingsUI.selectAutosingStrategyByName(existingStrategy!.strategyName);
                             HSLogger.log(`Strategy "${strategyDraft.strategyName}" updated.`, context);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, { notificationType: "success" });
+                            HSUI.Notify(HSLocalization.t('hs.autosing.strategy.updated', { name: strategyDraft.strategyName }), { notificationType: "success" });
                         } else {
                             const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, undefined, context);
                             if (!saved) {
-                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                HSUI.Notify(HSLocalization.t('hs.autosing.strategy.failedSave'), { notificationType: "error" });
                                 return;
                             }
                             HSSettingsUI.updateStrategyDropdownList();
                             HSSettingsUI.selectAutosingStrategyByName(strategyDraft.strategyName);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, { notificationType: "success" });
+                            HSUI.Notify(
+                                isDuplicateMode
+                                    ? HSLocalization.t('hs.autosing.strategy.savedAsNew', { name: strategyDraft.strategyName })
+                                    : HSLocalization.t('hs.autosing.strategy.createdAndSelected', { name: strategyDraft.strategyName }),
+                                { notificationType: "success" }
+                            );
                         }
                         uiMod.CloseModal(modalID);
                     } catch (err) {

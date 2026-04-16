@@ -15,6 +15,7 @@ import { getAvgAndStdLast, getLogC15Std } from "./hs-autosingStatsUtils";
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 import { HSLogger } from "../../hs-core/hs-logger";
 import { SingularityBundle } from "./hs-autosingExportManager";
+import { HSLocalization } from "../../hs-core/hs-localization";
 
 // =============================
 // Class Properties and Fields
@@ -249,25 +250,27 @@ export class HSAutosingModal {
         this.#timerHeader.className = 'hs-timer-header';
 
         const title = document.createElement('span');
-        title.textContent = '⏱️ Autosing';
+        title.textContent = `⏱️ ${HSLocalization.t('hs.autosing.modal.title')}`;
         title.className = 'hs-timer-title';
 
         // Pause button
         this.#pauseBtn = document.createElement('button');
         this.#pauseBtn.id = 'hs-timer-ctrl-pause';
         this.#pauseBtn.textContent = '⏸️';
-        this.#pauseBtn.title = "Pause Autosing";
+        this.#pauseBtn.title = HSLocalization.t('hs.autosing.modal.pause');
         this.#pauseBtn.className = 'hs-timer-ctrl-btn';
         this.#pauseBtn.onclick = () => {
             this.#isPaused = !this.#isPaused;
             this.#pauseBtn.textContent = this.#isPaused ? '▶️' : '⏸️';
-            this.#pauseBtn.title = this.#isPaused ? 'Resume Autosing' : 'Pause Autosing';
+            this.#pauseBtn.title = this.#isPaused
+                ? HSLocalization.t('hs.autosing.modal.resume')
+                : HSLocalization.t('hs.autosing.modal.pause');
         };
         // Restart button
         this.#restartButton = document.createElement('button');
         this.#restartButton.id = 'hs-timer-ctrl-restart';
         this.#restartButton.textContent = '🔄';
-        this.#restartButton.title = "Restart Singularity from the beginning";
+        this.#restartButton.title = HSLocalization.t('hs.autosing.modal.restart');
         this.#restartButton.className = 'hs-timer-ctrl-btn';
         this.#restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
@@ -283,7 +286,7 @@ export class HSAutosingModal {
         this.#stopButton = document.createElement('button');
         this.#stopButton.id = 'hs-timer-ctrl-stop';
         this.#stopButton.textContent = '🔴';
-        this.#stopButton.title = "Stop Autosing NOW";
+        this.#stopButton.title = HSLocalization.t('hs.autosing.modal.stopNow');
         this.#stopButton.className = 'hs-timer-ctrl-btn';
         this.#stopButton.onclick = () => {
             if (this.#modalMode === 'review') {
@@ -298,7 +301,7 @@ export class HSAutosingModal {
         this.#finishStopBtn = document.createElement('button');
         this.#finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
         this.#finishStopBtn.textContent = '🟠';
-        this.#finishStopBtn.title = "Stop Autosing at the end of current Singularity";
+        this.#finishStopBtn.title = HSLocalization.t('hs.autosing.modal.stopAfterCurrent');
         this.#finishStopBtn.className = 'hs-timer-ctrl-btn';
         this.#finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
@@ -312,7 +315,7 @@ export class HSAutosingModal {
         this.#chartToggleBtn = document.createElement('button');
         this.#chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.#chartToggleBtn.textContent = '📊';
-        this.#chartToggleBtn.title = "Toggle Detailed Data Visibility";
+        this.#chartToggleBtn.title = HSLocalization.t('hs.autosing.modal.toggleDetails');
         this.#chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.#chartToggleBtn.onclick = () => {
             this.#toggleDetailedDataVisibility(!this.#showDetailedData);
@@ -327,7 +330,7 @@ export class HSAutosingModal {
         this.#minimizeBtn = document.createElement('button');
         this.#minimizeBtn.id = 'hs-timer-ctrl-minimize';
         this.#minimizeBtn.textContent = '−';
-        this.#minimizeBtn.title = "Minimize";
+        this.#minimizeBtn.title = HSLocalization.t('hs.autosing.modal.minimize');
         this.#minimizeBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.#minimizeBtn.onclick = () => this.#toggleMinimize();
 
@@ -619,7 +622,9 @@ export class HSAutosingModal {
         this.#stopButton.style.order = isReview ? '-1' : '';
 
         this.#stopButton.textContent = isReview ? '✖️' : '🔴';
-        this.#stopButton.title = isReview ? 'Close stats modal' : 'Stop Autosing NOW';
+        this.#stopButton.title = isReview
+            ? HSLocalization.t('hs.autosing.modal.closeStats')
+            : HSLocalization.t('hs.autosing.modal.stopNow');
     }
 
     /** Compute and apply auto width and height for the modal and chart containers. */

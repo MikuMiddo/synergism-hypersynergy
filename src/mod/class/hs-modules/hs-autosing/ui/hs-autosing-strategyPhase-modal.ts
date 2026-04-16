@@ -7,6 +7,7 @@ import {
 import { openAutosingCorruptionModal } from "./hs-autosing-corruption-modal";
 import { openAutosingChallengesModal } from "./hs-autosing-challenge-modal";
 import { HSUI } from "../../../hs-core/hs-ui"
+import { HSLocalization } from "../../../hs-core/hs-localization";
 
 export async function openStrategyPhaseModal(
     uiMod: HSUI,
@@ -73,14 +74,14 @@ export async function openStrategyPhaseModal(
         <div class="hs-phase-modal-container">
             ${isSpecialPhase && displayName
                 ? `<div class="hs-phase-select-group">
-                    <label class="hs-phase-label">Phase</label>
+                    <label class="hs-phase-label">${HSLocalization.t('hs.autosing.phase.phase')}</label>
                     <div class="hs-phase-select" style="cursor: default;">${displayName}</div>
                 </div>`
                 : ""}
 
             ${!isSpecialPhase
                 ? `<div class="hs-phase-select-group">
-                        <label class="hs-phase-label">Starting Phase</label>
+                        <label class="hs-phase-label">${HSLocalization.t('hs.autosing.phase.start')}</label>
                         <select class="hs-phase-select" disabled>
                             <option selected>
                                 ${startPhaseValue}
@@ -89,7 +90,7 @@ export async function openStrategyPhaseModal(
                     </div>
 
                     <div class="hs-phase-select-group">
-                        <label class="hs-phase-label">Ending Phase</label>
+                        <label class="hs-phase-label">${HSLocalization.t('hs.autosing.phase.end')}</label>
                         <select
                             id="hs-autosing-end-phase"
                             class="hs-phase-select"
@@ -100,32 +101,36 @@ export async function openStrategyPhaseModal(
                 : ""}
 
             <div class="hs-phase-select-group">
-                <label class="hs-phase-label">Corruption Loadout</label>
+                <label class="hs-phase-label">${HSLocalization.t('hs.autosing.phase.corruptionLoadout')}</label>
                 <div class="hs-phase-select" id="hs-phase-corruption-selection">
-                    ${selectedLoadoutName ?? "None"}
+                    ${selectedLoadoutName ?? HSLocalization.t('hs.autosing.phase.none')}
                 </div>
             </div>
 
             <div class="hs-phase-config-group">
                 <div class="hs-phase-config-btn" id="hs-autosing-phase-corruptions">
-                    Select Corruption Loadout
+                    ${HSLocalization.t('hs.autosing.phase.selectCorruptionLoadout')}
                 </div>
                 <div class="hs-phase-config-btn" id="hs-autosing-phase-challenges">
-                    Configure Challenges
+                    ${HSLocalization.t('hs.autosing.phase.configureChallenges')}
                 </div>
             </div>
 
             <div class="hs-phase-footer">
                 <div class="hs-phase-done-btn" id="hs-autosing-phase-done">
-                    ${isEditing ? "Save" : "Create Phase"}
+                    ${isEditing ? HSLocalization.t('hs.autosing.phase.save') : HSLocalization.t('hs.autosing.phase.create')}
                 </div>
                 <div class="hs-phase-error" id="hs-phase-error" style="display:none;"></div>
             </div>
         </div>
         `,
         title: isEditing
-            ? (displayName ? `Edit ${displayName}` : `Edit Strategy Phase ${existingPhase.startPhase}-${existingPhase.endPhase}`)
-            : (displayName ? `Create ${displayName}` : `Create Strategy Phase`),
+            ? (displayName
+                ? HSLocalization.t('hs.autosing.phase.editDisplayTitle', { name: displayName })
+                : HSLocalization.t('hs.autosing.phase.editTitle', { range: `${existingPhase.startPhase}-${existingPhase.endPhase}` }))
+            : (displayName
+                ? HSLocalization.t('hs.autosing.phase.createDisplayTitle', { name: displayName })
+                : HSLocalization.t('hs.autosing.phase.createTitle')),
         parentModalId: parentModalId
     };
 
@@ -181,7 +186,7 @@ export async function openStrategyPhaseModal(
                                 existingPhase.corruptionLoadoutName = selectedLoadoutName;
                             }
 
-                            const label = selectedLoadoutName ? selectedLoadoutName : "None";
+                            const label = selectedLoadoutName ? selectedLoadoutName : HSLocalization.t('hs.autosing.phase.none');
                             const selectionEl = document.getElementById("hs-phase-corruption-selection") as HTMLDivElement | null;
                             if (selectionEl) {
                                 selectionEl.textContent = label;

@@ -1,6 +1,7 @@
 import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_ACTION_VALUE } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge } from "../../../../types/module-types/hs-autosing-types";
+import { HSLocalization } from "../../../hs-core/hs-localization";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 
 /** Challenge Modal Builder for Autosing
@@ -32,12 +33,17 @@ export async function openAutosingChallengesModal(
     let separatorIndex: number = workingChallenges.length;
 
     // Precompute map for fast special-action label lookup
-    const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map(a => [a.value, a.label] as const));
+    const getLocalizedSpecialActionLabel = (label: string): string =>
+        HSLocalization.tOrFallback(`hs.autosing.action.${label}`, label);
+    const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(
+        SPECIAL_ACTIONS.map(a => [a.value, getLocalizedSpecialActionLabel(a.label)] as const)
+    );
 
     // Utility: Get label for special actions (fast via map)
     const getSpecialActionLabel = (entry: Challenge): string | null => {
         if (entry.challengeNumber === LOADOUT_ACTION_VALUE) {
-            return entry.loadoutName ? `Load Corruption Loadout: ${entry.loadoutName}` : "Load Corruption Loadout";
+            const loadCorruptionLoadout = HSLocalization.t('hs.autosing.challenge.loadCorruptionLoadout');
+            return entry.loadoutName ? `${loadCorruptionLoadout}: ${entry.loadoutName}` : loadCorruptionLoadout;
         }
         return SPECIAL_ACTION_LABEL_BY_ID.get(entry.challengeNumber) ?? null;
     };
@@ -108,8 +114,8 @@ export async function openAutosingChallengesModal(
 
         const displayText = isSpecial
             ? `<strong>${actionLabel}</strong>`
-            : `Challenge ${entry.challengeNumber}
-     (${entry.challengeCompletions} completions)`;
+            : `<strong>${HSLocalization.t('hs.autosing.challenge.challengeDisplay', { number: entry.challengeNumber })}</strong>
+     (${entry.challengeCompletions} ${HSLocalization.t('hs.autosing.challenge.completions')})`;
 
         return `
         <div class="hs-challenge-item" data-index="${index}">
@@ -117,12 +123,12 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenge-item-text">
                 ${displayText}
                 <div class="hs-challenge-meta">
-                    Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)} 
+                    ${HSLocalization.t('hs.autosing.challenge.waitBefore')}: ${formatMs(entry.challengeWaitBefore ?? 0)} 
                     ${!isSpecial
-                ? ` | Wait inside: ${formatMs(entry.challengeWaitTime)}`
+                ? ` | ${HSLocalization.t('hs.autosing.challenge.waitInside')}: ${formatMs(entry.challengeWaitTime)}`
                 : ""}
                     ${!isSpecial
-                ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
+                ? ` | ${HSLocalization.t('hs.autosing.challenge.max')}: ${formatMs(entry.challengeMaxTime ?? -1)}`
                 : ""}
                 </div>
                 ${entry.comment ? `<div class=\"hs-challenge-comment\">🗨️ ${entry.comment}</div>` : ""}
@@ -201,7 +207,13 @@ export async function openAutosingChallengesModal(
             });
         }
 
-        return elements.join("");
+        return elements
+            .join("")
+            .replaceAll("Jump here (IF)", HSLocalization.t('hs.autosing.challenge.jumpHere'))
+            .replaceAll("Add Here", HSLocalization.t('hs.autosing.challenge.addHere'))
+            .replaceAll("Stored C15", HSLocalization.t('hs.autosing.challenge.storedC15'))
+            .replaceAll("Current C15", HSLocalization.t('hs.autosing.challenge.currentC15'))
+            .replaceAll("challenge ", `${HSLocalization.t('hs.autosing.challenge.challengeDisplay', { number: '' }).replace(/\s*$/, '')} `);
     };
 
 
@@ -217,9 +229,9 @@ export async function openAutosingChallengesModal(
 
     const loadoutOptions = corruptionLoadouts.length > 0
         ? `
-            <option value="" disabled>-- Corruption Loadouts --</option>
+            <option value="" disabled>-- ${HSLocalization.t('hs.autosing.challenge.corruptionLoadouts')} --</option>
             ${corruptionLoadouts
-            .map(loadout => `<option value="loadout:${loadout.name}">Load Corruption Loadout: ${loadout.name}</option>`)
+            .map(loadout => `<option value="loadout:${loadout.name}">${HSLocalization.t('hs.autosing.challenge.loadCorruptionLoadout')}: ${loadout.name}</option>`)
             .join("")}
         `
         : "";
@@ -230,47 +242,47 @@ export async function openAutosingChallengesModal(
     <div id="${modalId}" class="hs-challenges-modal-container">
         <div class="hs-challenges-input-section">
             <div class="hs-challenges-input-row" style="grid-column: 1 / -1; grid-template-columns: 120px 1fr;">
-            <div class="hs-challenges-input-label">Special Action:</div>
+            <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.specialAction')}</div>
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
-                    <option value="">None (Standard Challenge)</option>
-                    ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
+                    <option value="">${HSLocalization.t('hs.autosing.challenge.noneStandard')}</option>
+                    ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${getLocalizedSpecialActionLabel(a.label)}</option>`).join("")}
                     ${loadoutOptions}
                 </select>
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Challenge #:</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.challengeNumber')}</div>
                 <input type="number" id="hs-challenge-num-input" class="hs-challenges-input" min="1" max="15" value="1" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Min Completions:</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.minCompletions')}</div>
                 <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Wait before (ms):</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.waitBeforeMs')}</div>
                 <input type="number" id="hs-challenge-wait-before-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Wait inside (ms):</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.waitInsideMs')}</div>
                 <input type="number" id="hs-challenge-wait-inside-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Max Time (ms):</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.maxTimeMs')}</div>
                 <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="0" value="10000" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Comment:</div>
-                <input type="text" id="hs-challenge-comment-input" class="hs-challenges-input" maxlength="200" placeholder="Add a comment (optional)" />
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.comment')}</div>
+                <input type="text" id="hs-challenge-comment-input" class="hs-challenges-input" maxlength="200" placeholder="${HSLocalization.t('hs.autosing.challenge.commentPlaceholder')}" />
             </div>
             <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
-                <div class="hs-challenges-input-label">If Jump Mode</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.ifJumpMode')}</div>
                 <select id="hs-if-jump-mode" class="hs-challenges-input">
-                    <option value="challenges">Challenges</option>
-                    <option value="stored_c15">Stored C15 value</option>
+                    <option value="challenges">${HSLocalization.t('hs.autosing.challenge.challenges')}</option>
+                    <option value="stored_c15">${HSLocalization.t('hs.autosing.challenge.storedC15')}</option>
                 </select>
             </div>
 
             <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-challenge-row" style="display:none;">
-                <div class="hs-challenges-input-label">If Challenge</div>
+                <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.ifChallenge')}</div>
                 <input type="number"
                     id="hs-if-jump-challenge"
                     class="hs-challenges-input"
@@ -280,7 +292,7 @@ export async function openAutosingChallengesModal(
             </div>
 
                 <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
-                    <div class="hs-challenges-input-label">Condition</div>
+                    <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.condition')}</div>
                     <select id="hs-if-jump-operator" class="hs-challenges-input">
                         <option value=">">&gt;</option>
                         <option value="<">&lt;</option>
@@ -288,14 +300,14 @@ export async function openAutosingChallengesModal(
                 </div>
 
                 <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-value-row" style="display:none;">
-                    <div class="hs-challenges-input-label">Value</div>
+                    <div class="hs-challenges-input-label">${HSLocalization.t('hs.autosing.challenge.value')}</div>
                     <input type="number"
                         id="hs-if-jump-value"
                         class="hs-challenges-input"
                         value="1" />
                 </div>
             </div>
-            <div class="hs-challenges-add-btn" id="hs-challenge-add-btn">Add Action/Challenge</div>
+            <div class="hs-challenges-add-btn" id="hs-challenge-add-btn">${HSLocalization.t('hs.autosing.challenge.addAction')}</div>
 
         <div class="hs-challenges-list-container">
             <div id="hs-challenge-list-container">
@@ -304,11 +316,13 @@ export async function openAutosingChallengesModal(
         </div>
 
         <div class="hs-challenges-footer">
-            <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" id="hs-challenges-cancel-btn">Cancel</div>
-            <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">Save Strategy</div>
+            <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" id="hs-challenges-cancel-btn">${HSLocalization.t('hs.autosing.challenge.cancel')}</div>
+            <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">${HSLocalization.t('hs.autosing.challenge.saveStrategy')}</div>
         </div>
     </div>`,
-        title: displayName ? `Configure ${displayName}` : `Configure Strategy Actions (${startPhase}-${endPhase})`
+        title: displayName
+            ? HSLocalization.t('hs.autosing.challenge.configureDisplayTitle', { name: displayName })
+            : HSLocalization.t('hs.autosing.challenge.configureTitle', { range: `${startPhase}-${endPhase}` })
     };
 
     const modalInstance = await uiMod.Modal({
@@ -743,7 +757,7 @@ export async function openAutosingChallengesModal(
 
                 if (isChallengesMode) {
                     // Editable mode for Challenges
-                    challengeLabel.textContent = "If Challenge";
+                    challengeLabel.textContent = HSLocalization.t('hs.autosing.challenge.ifChallenge');
                     challengeInput.type = "number";
                     challengeInput.min = "1";
                     challengeInput.max = "15";
@@ -759,7 +773,7 @@ export async function openAutosingChallengesModal(
                         challengeInput.dataset.lastChallengeValue = challengeInput.value;
                     }
 
-                    challengeLabel.textContent = "Multiplier (10^x)";
+                    challengeLabel.textContent = HSLocalization.t('hs.autosing.challenge.multiplier');
                     challengeInput.type = "number";
                     challengeInput.min = "";
                     challengeInput.max = "";
@@ -784,7 +798,7 @@ export async function openAutosingChallengesModal(
 
                 if (isChallengesMode) {
                     // Editable mode for Challenges - normal value input
-                    valueLabel.textContent = "Value";
+                    valueLabel.textContent = HSLocalization.t('hs.autosing.challenge.value');
                     valueInput.type = "number";
                     valueInput.disabled = false;
                     valueInput.value = valueInput.dataset.lastValue ?? "1";
@@ -798,10 +812,10 @@ export async function openAutosingChallengesModal(
                         valueInput.dataset.lastValue = valueInput.value;
                     }
 
-                    valueLabel.textContent = "Compare To";
+                    valueLabel.textContent = HSLocalization.t('hs.autosing.challenge.compareTo');
                     valueInput.type = "text";
                     valueInput.disabled = true;
-                    valueInput.value = "Current C15 value";
+                    valueInput.value = HSLocalization.t('hs.autosing.challenge.currentC15');
                     valueInput.style.opacity = "0.6";
                     valueInput.style.cursor = "not-allowed";
                     valueRow.style.opacity = "0.8";
@@ -821,7 +835,7 @@ export async function openAutosingChallengesModal(
         (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
         (document.getElementById("hs-if-jump-mode") as HTMLSelectElement).value = "challenges";
-        (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
+        (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = HSLocalization.t('hs.autosing.challenge.addAction');
         editingIndex = null;
         updateInputState();
     };
@@ -959,7 +973,7 @@ export async function openAutosingChallengesModal(
                     (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
                     (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
 
-                    (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+                    (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = HSLocalization.t('hs.autosing.challenge.updateAction');
 
                     updateInputState();
                     return;
@@ -978,7 +992,7 @@ export async function openAutosingChallengesModal(
 
                 (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
                 (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
-                (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+                (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = HSLocalization.t('hs.autosing.challenge.updateAction');
                 updateInputState();
             }
 

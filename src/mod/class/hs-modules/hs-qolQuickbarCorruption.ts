@@ -1,4 +1,5 @@
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
@@ -72,7 +73,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         const infobox = document.createElement('div');
         infobox.id = 'hs-corruption-infobox';
         infobox.textContent = '?';
-        infobox.title = 'Alt+Click a slot to pick an icon for it.\nRight-click to clear the assigned icon.';
+        infobox.title = HSLocalization.t('hs.qol.iconAssignHint');
 
         this.container.appendChild(this.#corruptionSummaryWrapper);
         this.container.appendChild(this.#slotsWrapper);
@@ -169,7 +170,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         const slot = document.createElement('button');
         slot.type = 'button';
         slot.className = 'hs-corruption-slot';
-        slot.title = `🔧 ${slotName}`;
+        slot.title = HSLocalization.t('hs.qol.corruptionSlotTitle', { name: slotName });
         slot.setAttribute('aria-label', slotName);
         slot.dataset.corruptionLoadout = slotName;
         slot.dataset.quickbarIndex = String(index + 1);
@@ -199,7 +200,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             event.preventDefault();
             event.stopPropagation();
             this.#clearIconForSlot(index);
-            HSUI.Notify('Corruption slot icon cleared', { notificationType: 'default' });
+            HSUI.Notify(HSLocalization.t('hs.qol.corruptionIconCleared'), { notificationType: 'default' });
         };
 
         slot.addEventListener('click', clickHandler);
@@ -403,7 +404,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
         });
 
-        HSUI.Notify('Icon picker active: click an in-game icon/image to assign to this slot. Any click ends mode.', { notificationType: 'default' });
+        HSUI.Notify(HSLocalization.t('hs.qol.iconPickerActive'), { notificationType: 'default' });
 
         this.#pickDocClickListener = (event: MouseEvent) => {
             const target = event.target instanceof Element ? event.target : null;
@@ -419,7 +420,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
 
             const iconUrl = this.#findIconUrlFromEventTarget(event.target);
             if (!iconUrl) {
-                HSUI.Notify('No usable icon found on the clicked element.', { notificationType: 'warning' });
+                HSUI.Notify(HSLocalization.t('hs.qol.iconPickerNoUsableIcon'), { notificationType: 'warning' });
                 this.#endPickupMode();
                 return;
             }
@@ -428,7 +429,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             event.stopPropagation();
 
             this.#setIconForSlot(this.#pickTargetSlotIndex, iconUrl);
-            HSUI.Notify('Corruption slot icon set successfully', { notificationType: 'success' });
+            HSUI.Notify(HSLocalization.t('hs.qol.corruptionIconSet'), { notificationType: 'success' });
             this.#endPickupMode();
         };
 

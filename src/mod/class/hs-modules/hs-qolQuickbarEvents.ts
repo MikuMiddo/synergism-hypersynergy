@@ -1,6 +1,7 @@
 ﻿import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSLocalization } from "../hs-core/hs-localization";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 import { HSWebSocket } from "../hs-core/hs-websocket";
 
@@ -145,18 +146,22 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
                 .map((e: any) => new Date(e).toLocaleTimeString(undefined, { hour12: false }));
 
             const moreCount = happyHourEvent.ends.length - displayed.length;
-            const suffix = moreCount > 0 ? `, (+${moreCount}...)` : '';
-            return `${happyHourAmount} HH ending at: ${displayed.join(', ')}${suffix}`;
+            const suffix = moreCount > 0 ? HSLocalization.t('hs.events.moreCount', { count: moreCount }) : '';
+            return HSLocalization.t('hs.events.happyHourEndingAt', {
+                amount: happyHourAmount,
+                times: displayed.join(', '),
+                suffix
+            });
         }
-        return 'No active HH';
+        return HSLocalization.t('hs.events.noActiveHappyHour');
     }
 
     /** Format lotus event end-time into tooltip text. */
     #formatLotusTooltip(lotusEvent: any): string {
         if (lotusEvent?.ends && lotusEvent.ends.length > 0) {
             const lotusEndTime = new Date(lotusEvent.ends[0]).toLocaleTimeString(undefined, { hour12: false });
-            return `Lotus until: ${lotusEndTime}`;
+            return HSLocalization.t('hs.events.lotusUntil', { time: lotusEndTime });
         }
-        return 'No active Lotus';
+        return HSLocalization.t('hs.events.noActiveLotus');
     }
 }
