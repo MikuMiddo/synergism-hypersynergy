@@ -271,6 +271,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             if (/Auto\s+Open\s*\[OFF\]/i.test(text)) return false;
             if (/Auto\s+Open\s*\[(ON|OFF)\]/i.test(text)) return /\[ON\]/i.test(text);
             if (/Auto\s+Open\s*"?\d+%"?/i.test(text)) return true;
+            if (/自动\s*\[\s*开\s*\]/.test(text)) return true;
+            if (/自动\s*\[\s*关\s*\]/.test(text)) return false;
             if (/(自动|鑷姩).*(开启|启用|ON|\[ON\])/i.test(text)) return true;
             if (/(自动|鑷姩).*(关闭|禁用|OFF|\[OFF\])/i.test(text)) return false;
 

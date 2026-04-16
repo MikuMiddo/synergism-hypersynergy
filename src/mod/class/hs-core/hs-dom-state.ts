@@ -125,6 +125,11 @@ export class HSDOMState {
             if (tokenState !== null) return tokenState;
         }
 
+        const cnBracketMatch = text.match(/自动\s*\[\s*([开关])\s*\]/);
+        if (cnBracketMatch) {
+            return cnBracketMatch[1] === '开';
+        }
+
         const colonMatch = text.match(/[:：]\s*([^\s\]]+)/);
         if (colonMatch) {
             const tokenState = this.parseTokenState(colonMatch[1]);
@@ -133,6 +138,8 @@ export class HSDOMState {
 
         if (/\bON\b/i.test(text)) return true;
         if (/\bOFF\b/i.test(text)) return false;
+        if (/自动\s*\[\s*开\s*\]/.test(text)) return true;
+        if (/自动\s*\[\s*关\s*\]/.test(text)) return false;
         if (/(开启|启用|已开启|已启用)/.test(text)) return true;
         if (/(关闭|禁用|已关闭|已禁用)/.test(text)) return false;
         if (/(自动.*开|自动.*启)/.test(text)) return true;
