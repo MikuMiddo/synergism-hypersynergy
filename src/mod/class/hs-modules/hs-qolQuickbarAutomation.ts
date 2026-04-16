@@ -256,9 +256,13 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
      * Checks ARIA attributes, text content, specific patterns, and CSS class hints.
      * This function is intentionally tolerant of multiple UI representations.
      */
-    #isElementOn(el: HTMLElement | null): boolean {
+    #isElementOn(selectorSpec: AutomationSelectorSpec, el: HTMLElement | null): boolean {
         if (!el) return false;
         try {
+            const selector = this.#selectorToString(selectorSpec);
+            const selectorState = HSDOMState.getSelectorStateFromPlayer(selector);
+            if (selectorState !== null) return selectorState;
+
             const ariaPressed = el.getAttribute('aria-pressed');
             if (ariaPressed === 'true') return true;
             if (ariaPressed === 'false') return false;
@@ -355,9 +359,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         // Build matcher according to expected contract
         if (expected === undefined || expected === 'ON') {
-            matcher = (el: HTMLElement | null) => this.#isElementOn(el);
+            matcher = (el: HTMLElement | null) => this.#isElementOn(selectorSpec, el);
         } else if (expected === 'OFF') {
-            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
+            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(selectorSpec, el);
         } else {
             const normalizedExpected = expected.toUpperCase();
             if (normalizedExpected.includes('PERCENTAGE')) {
@@ -371,9 +375,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                     return /MAX|最大|尽可能|濂藉鍙兘/i.test(currentText);
                 };
             } else if (normalizedExpected.includes('OFF')) {
-                matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
+                matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(selectorSpec, el);
             } else if (normalizedExpected.includes('ON')) {
-                matcher = (el: HTMLElement | null) => this.#isElementOn(el);
+                matcher = (el: HTMLElement | null) => this.#isElementOn(selectorSpec, el);
             } else {
                 const expectedText = this.#normalizeToggleText(expected);
                 matcher = (el: HTMLElement | null) => {
