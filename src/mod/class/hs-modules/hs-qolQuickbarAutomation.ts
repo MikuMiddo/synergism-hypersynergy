@@ -115,8 +115,10 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         { selector: '#tesseractAutoToggle3.auto.autobuyerToggleButton' },
         { selector: '#tesseractAutoToggle4.auto.autobuyerToggleButton' },
         { selector: '#tesseractAutoToggle5.auto.autobuyerToggleButton' },
+        { selector: '#toggle15.auto', expected: 'OFF' },
+        { selector: '#toggle21.auto', expected: 'OFF' },
+        { selector: '#toggle27.auto', expected: 'OFF' },
         { selector: '#tesseractautobuytoggle', expected: 'Auto Buy: ON' },
-        { selector: '#tesseractautobuymode', expected: 'Mode: PERCENTAGE' },
         { selector: '#coinAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
         { selector: '#prestigeAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
         { selector: '#transcendAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
@@ -170,6 +172,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         BuildingsAndUpgrades: {
             kind: 'group',
             selectors: HSQOLAutomationQuickbar.#automationBuildingsAndUpgradesSelectors,
+            selectorVisibility: 'none',
             hideWhenFullyEnabledMinHighestSingularityCount: 25,
             buttonId: 'automationQuickBar-buildings',
             label: 'Buildings and Upgrades',
@@ -405,6 +408,15 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return !!el && el.isConnected && el.style.display !== 'none';
     }
 
+    /** Return the automation element even if hidden, when visibility rules are intentionally disabled for a group. */
+    #getAutomationElementForState(selectorSpec: AutomationSelectorSpec, config: AutomationQuickbarToggleConfig): HTMLElement | null {
+        if (!this.#shouldApplyAutomationSelectorVisibility(config)) {
+            return this.#getCachedAutomationElement(selectorSpec);
+        }
+
+        return this.#getVisibleAutomationElement(selectorSpec, config);
+    }
+
     /** Reset queued render state and existing watchers before rebuilding quickbar UI. */
     #resetAutomationQuickbarRuntime(): void {
         if (this.#queuedAutomationFrameId !== null) {
@@ -472,7 +484,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             const targets = selectors
                 .map((selectorSpec, idx) => {
                     const sel = this.#selectorToString(selectorSpec);
-                    const el = this.#getVisibleAutomationElement(selectorSpec, config);
+                    const el = this.#getAutomationElementForState(selectorSpec, config);
                     const isOn = compiledSelectors[idx].matcher(el);
                     return { sel, el, isOn };
                 })
@@ -677,7 +689,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             compiledSelectors
                 .map(({ selectorSpec, matcher }) => {
                     const sel = this.#selectorToString(selectorSpec);
-                    const el = this.#getVisibleAutomationElement(selectorSpec, config);
+                    const el = this.#getAutomationElementForState(selectorSpec, config);
                     const isOn = matcher(el);
                     return { sel, el, isOn };
                 })
