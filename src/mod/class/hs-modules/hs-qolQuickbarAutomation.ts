@@ -115,10 +115,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         { selector: '#tesseractAutoToggle3.auto.autobuyerToggleButton' },
         { selector: '#tesseractAutoToggle4.auto.autobuyerToggleButton' },
         { selector: '#tesseractAutoToggle5.auto.autobuyerToggleButton' },
-        { selector: '#toggle15.auto', expected: 'OFF' },
-        { selector: '#toggle21.auto', expected: 'OFF' },
-        { selector: '#toggle27.auto', expected: 'OFF' },
         { selector: '#tesseractautobuytoggle', expected: 'Auto Buy: ON' },
+        { selector: '#tesseractautobuymode', expected: 'Mode: PERCENTAGE' },
         { selector: '#coinAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
         { selector: '#prestigeAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
         { selector: '#transcendAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
@@ -172,7 +170,6 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         BuildingsAndUpgrades: {
             kind: 'group',
             selectors: HSQOLAutomationQuickbar.#automationBuildingsAndUpgradesSelectors,
-            selectorVisibility: 'none',
             hideWhenFullyEnabledMinHighestSingularityCount: 25,
             buttonId: 'automationQuickBar-buildings',
             label: 'Buildings and Upgrades',
@@ -260,7 +257,46 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
      * This function is intentionally tolerant of multiple UI representations.
      */
     #isElementOn(el: HTMLElement | null): boolean {
-        return HSDOMState.isElementOn('', el);
+        if (!el) return false;
+        try {
+            const ariaPressed = el.getAttribute('aria-pressed');
+            if (ariaPressed === 'true') return true;
+            if (ariaPressed === 'false') return false;
+
+            const ariaChecked = el.getAttribute('aria-checked');
+            if (ariaChecked === 'true') return true;
+            if (ariaChecked === 'false') return false;
+
+            const text = (el.textContent || '').trim();
+            if (/Auto\s+Open\s*\[OFF\]/i.test(text)) return false;
+            if (/Auto\s+Open\s*\[(ON|OFF)\]/i.test(text)) return /\[ON\]/i.test(text);
+            if (/Auto\s+Open\s*"?\d+%"?/i.test(text)) return true;
+            if (/(自动|鑷姩).*(开启|启用|ON|\[ON\])/i.test(text)) return true;
+            if (/(自动|鑷姩).*(关闭|禁用|OFF|\[OFF\])/i.test(text)) return false;
+
+            const openMatch = text.match(/Open\s+(Cubes|Tesseracts|Hypercubes|Platonic)\s*:?\s*\[(ON|OFF)\]/i);
+            if (openMatch) return openMatch[2].toUpperCase() === 'ON';
+            const cnOpenMatch = text.match(/(打开|开启).*(方块|立方体|超立方体|Hypercube|Platonic).*\[(ON|OFF)\]/i);
+            if (cnOpenMatch) return cnOpenMatch[3].toUpperCase() === 'ON';
+
+            if (/Auto\s+Upgrades:\s*\[ON\]/i.test(text)) return true;
+            if (/Auto\s+Upgrades:\s*\[OFF\]/i.test(text)) return false;
+            if (/(自动升级|鑷姩.*升级).*\[ON\]/i.test(text)) return true;
+            if (/(自动升级|鑷姩.*升级).*\[OFF\]/i.test(text)) return false;
+
+            const domState = HSDOMState.extractToggleState(el);
+            if (domState !== null) {
+                return domState;
+            }
+
+            const cls = String(el.className || '');
+            if (/\b(on|enabled|active)\b/i.test(cls)) return true;
+            if (/\b(off|disabled|inactive)\b/i.test(cls)) return false;
+            if (/\bON\b/i.test(text) || /enabled/i.test(text)) return true;
+        } catch (e) {
+            HSLogger.log(`isElementOn check failed: ${e}`, this.context);
+        }
+        return false;
     }
 
     /** Normalize toggle text by collapsing whitespace for stable comparisons. */
@@ -317,11 +353,33 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         // Build matcher according to expected contract
         if (expected === undefined || expected === 'ON') {
-            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, true);
+            matcher = (el: HTMLElement | null) => this.#isElementOn(el);
         } else if (expected === 'OFF') {
-            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, false);
+            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
         } else {
-            matcher = (el: HTMLElement | null) => HSDOMState.matchesExpected(selector, el, expected);
+            const normalizedExpected = expected.toUpperCase();
+            if (normalizedExpected.includes('PERCENTAGE')) {
+                matcher = (el: HTMLElement | null) => HSDOMState.isPercentageMode(selector, el);
+            } else if (normalizedExpected.includes('CHEAPEST')) {
+                matcher = (el: HTMLElement | null) => HSDOMState.isCheapestMode(selector, el);
+            } else if (normalizedExpected.includes('MAX')) {
+                matcher = (el: HTMLElement | null) => {
+                    if (!el) return false;
+                    const currentText = this.#normalizeToggleText(el.textContent || '');
+                    return /MAX|最大|尽可能|濂藉鍙兘/i.test(currentText);
+                };
+            } else if (normalizedExpected.includes('OFF')) {
+                matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
+            } else if (normalizedExpected.includes('ON')) {
+                matcher = (el: HTMLElement | null) => this.#isElementOn(el);
+            } else {
+                const expectedText = this.#normalizeToggleText(expected);
+                matcher = (el: HTMLElement | null) => {
+                    if (!el) return false;
+                    const currentText = this.#normalizeToggleText(el.textContent || '');
+                    return currentText === expectedText;
+                };
+            }
         }
 
         this.#selectorMatcherCache.set(matcherKey, matcher);
@@ -408,15 +466,6 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return !!el && el.isConnected && el.style.display !== 'none';
     }
 
-    /** Return the automation element even if hidden, when visibility rules are intentionally disabled for a group. */
-    #getAutomationElementForState(selectorSpec: AutomationSelectorSpec, config: AutomationQuickbarToggleConfig): HTMLElement | null {
-        if (!this.#shouldApplyAutomationSelectorVisibility(config)) {
-            return this.#getCachedAutomationElement(selectorSpec);
-        }
-
-        return this.#getVisibleAutomationElement(selectorSpec, config);
-    }
-
     /** Reset queued render state and existing watchers before rebuilding quickbar UI. */
     #resetAutomationQuickbarRuntime(): void {
         if (this.#queuedAutomationFrameId !== null) {
@@ -484,7 +533,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             const targets = selectors
                 .map((selectorSpec, idx) => {
                     const sel = this.#selectorToString(selectorSpec);
-                    const el = this.#getAutomationElementForState(selectorSpec, config);
+                    const el = this.#getVisibleAutomationElement(selectorSpec, config);
                     const isOn = compiledSelectors[idx].matcher(el);
                     return { sel, el, isOn };
                 })
@@ -689,7 +738,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             compiledSelectors
                 .map(({ selectorSpec, matcher }) => {
                     const sel = this.#selectorToString(selectorSpec);
-                    const el = this.#getAutomationElementForState(selectorSpec, config);
+                    const el = this.#getVisibleAutomationElement(selectorSpec, config);
                     const isOn = matcher(el);
                     return { sel, el, isOn };
                 })
