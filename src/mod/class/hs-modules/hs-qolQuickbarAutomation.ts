@@ -256,13 +256,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
      * Checks ARIA attributes, text content, specific patterns, and CSS class hints.
      * This function is intentionally tolerant of multiple UI representations.
      */
-    #isElementOn(selectorSpec: AutomationSelectorSpec, el: HTMLElement | null): boolean {
+    #isElementOn(el: HTMLElement | null): boolean {
         if (!el) return false;
         try {
-            const selector = this.#selectorToString(selectorSpec);
-            const selectorState = HSDOMState.getSelectorStateFromPlayer(selector);
-            if (selectorState !== null) return selectorState;
-
             const ariaPressed = el.getAttribute('aria-pressed');
             if (ariaPressed === 'true') return true;
             if (ariaPressed === 'false') return false;
@@ -359,9 +355,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         // Build matcher according to expected contract
         if (expected === undefined || expected === 'ON') {
-            matcher = (el: HTMLElement | null) => this.#isElementOn(selectorSpec, el);
+            matcher = (el: HTMLElement | null) => this.#isElementOn(el);
         } else if (expected === 'OFF') {
-            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(selectorSpec, el);
+            matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
         } else {
             const normalizedExpected = expected.toUpperCase();
             if (normalizedExpected.includes('PERCENTAGE')) {
@@ -375,9 +371,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                     return /MAX|最大|尽可能|濂藉鍙兘/i.test(currentText);
                 };
             } else if (normalizedExpected.includes('OFF')) {
-                matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(selectorSpec, el);
+                matcher = (el: HTMLElement | null) => !!el && !this.#isElementOn(el);
             } else if (normalizedExpected.includes('ON')) {
-                matcher = (el: HTMLElement | null) => this.#isElementOn(selectorSpec, el);
+                matcher = (el: HTMLElement | null) => this.#isElementOn(el);
             } else {
                 const expectedText = this.#normalizeToggleText(expected);
                 matcher = (el: HTMLElement | null) => {
@@ -779,12 +775,22 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
             const wantOn = !allOn;
             HSLogger.log(`automationQuickBar: ${ariaLabel} click wantOn=${wantOn} targets=${targets.length}`, this.context);
+            HSLogger.log(`automationQuickBar: ${ariaLabel} targetSummary=${JSON.stringify(targets.map((t, idx) => ({
+                sel: t.sel,
+                isOn: states[idx],
+                text: this.#normalizeToggleText(t.el.textContent || ''),
+                display: t.el.style.display || '',
+                className: String(t.el.className || '')
+            })))}`, this.context);
 
             targets.forEach((t, idx) => {
                 if (!t.el) return;
                 const currentlyOn = states[idx];
                 if (wantOn !== currentlyOn) {
+                    HSLogger.log(`automationQuickBar: clicking ${t.sel} currentlyOn=${currentlyOn} wantOn=${wantOn} text="${this.#normalizeToggleText(t.el.textContent || '')}"`, this.context);
                     try { t.el.click(); } catch (e) { HSLogger.log(`Failed to click ${t.sel}: ${e}`, this.context); }
+                } else {
+                    HSLogger.log(`automationQuickBar: skipping ${t.sel} currentlyOn=${currentlyOn} wantOn=${wantOn}`, this.context);
                 }
             });
 
