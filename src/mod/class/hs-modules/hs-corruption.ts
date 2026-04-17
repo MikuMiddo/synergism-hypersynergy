@@ -74,6 +74,10 @@ export class HSCorruption {
     static readonly #CORRUPTION_ICON_STORAGE_KEY = 'hs-corruption-loadout-icons';
     static #corruptionLoadoutIcons: Map<number, string> = new Map();
 
+    static #normalizeLoadoutName(name: string): string {
+        return name.replace(/[:：]\s*$/, '').trim();
+    }
+
     // =================================
     // ------- Helpers & Getters -------
     // =================================
@@ -217,13 +221,13 @@ export class HSCorruption {
             .slice(1) // First line is the "Next" loadout
             .filter(row => {
                 const name = row.querySelector<HTMLTableCellElement>('.corrLoadoutName')?.textContent ?? '';
-                const normalized = name.slice(0, -1); // Last character is ':'
-                return normalized !== 'Next' && normalized.length > 0;
+                const normalized = HSCorruption.#normalizeLoadoutName(name);
+                return normalized !== 'Next' && normalized !== '下次' && normalized.length > 0;
             });
             
         HSCorruption.#userLoadouts = validRows.map((row) => {
             const nameCell = row.querySelector<HTMLTableCellElement>('.corrLoadoutName');
-            const slotName = nameCell?.textContent?.slice(0, -1) ?? '';
+            const slotName = HSCorruption.#normalizeLoadoutName(nameCell?.textContent ?? '');
 
             const elements = {} as HSCorruptionLoadoutElements;
             const levels = {} as HSCorruptionLevels;

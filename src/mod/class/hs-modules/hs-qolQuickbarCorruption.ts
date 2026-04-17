@@ -33,6 +33,9 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #pickTargetSlotIndex: number | null = null;
     #pickDocClickListener: ((event: MouseEvent) => void) | null = null;
     #wasGdsEnabled: boolean | null = null;
+    #lastActivatedSlotIndex: number | null = null;
+    #lastCurrentSlotIndex: number | null = null;
+    #lastNextSlotIndex: number | null = null;
 
     #slotEventHandlers: Map<HTMLButtonElement, { click: (event: MouseEvent) => Promise<void>; contextmenu: (event: MouseEvent) => void }> = new Map();
 
@@ -120,6 +123,9 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#slots = [];
         this.#isPickingIcon = false;
         this.#pickTargetSlotIndex = null;
+        this.#lastActivatedSlotIndex = null;
+        this.#lastCurrentSlotIndex = null;
+        this.#lastNextSlotIndex = null;
     }
 
     /** Remove click/context menu event listeners from saved slot buttons. */
@@ -160,6 +166,17 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             this.#slots.push(slot);
             this.#applySlotIcon(slot);
         });
+
+        HSLogger.log(
+            `corruptionQuickbar: built slots=${JSON.stringify(
+                loadouts.map((loadout, index) => ({
+                    index: index + 1,
+                    name: loadout.name,
+                    levels: loadout.levels
+                }))
+            )}`,
+            this.context
+        );
     }
 
     /** Create a slot button for one corruption loadout row. */
@@ -188,6 +205,11 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
 
             if (loadButton) {
+                this.#lastActivatedSlotIndex = index;
+                HSLogger.log(
+                    `corruptionQuickbar: click slot=${index + 1} name="${slotName}" levels=${JSON.stringify(loadout.levels)}`,
+                    this.context
+                );
                 loadButton.click();
                 await HSUtils.sleep(50);
                 await HSCorruption.refreshLoadedCorruptions();
@@ -222,24 +244,69 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             slot.classList.remove('hs-silver-border');
         });
 
-        let matchedCurrent = false;
-        let matchedNext = false;
+        const currentMatches = this.#getMatchingLoadoutIndexes(current);
+        const nextMatches = this.#getMatchingLoadoutIndexes(next);
+        const sameCorruption = HSCorruption.matches(current, next);
 
-        this.#loadouts.forEach((loadout, index) => {
-            const slot = this.#slots[index];
-            if (!slot) return;
+        const currentMatchIndex = this.#pickPreferredMatchIndex(
+            currentMatches,
+            this.#lastActivatedSlotIndex,
+            this.#lastCurrentSlotIndex
+        );
+        const nextMatchIndex = this.#pickPreferredMatchIndex(
+            nextMatches,
+            this.#lastActivatedSlotIndex,
+            this.#lastNextSlotIndex
+        );
 
-            if (HSCorruption.matches(loadout.levels, current)) {
-                slot.classList.add('hs-rainbow-border');
-                matchedCurrent = true;
-            } else if (HSCorruption.matches(loadout.levels, next)) {
-                slot.classList.add('hs-silver-border');
-                matchedNext = true;
-            }
-        });
+        const matchedCurrent = currentMatchIndex !== null;
+        const matchedNext = nextMatchIndex !== null;
+
+        if (currentMatchIndex !== null) {
+            this.#slots[currentMatchIndex]?.classList.add('hs-rainbow-border');
+            this.#lastCurrentSlotIndex = currentMatchIndex;
+        }
+
+        if (!sameCorruption && nextMatchIndex !== null && nextMatchIndex !== currentMatchIndex) {
+            this.#slots[nextMatchIndex]?.classList.add('hs-silver-border');
+            this.#lastNextSlotIndex = nextMatchIndex;
+        } else if (sameCorruption) {
+            this.#lastNextSlotIndex = nextMatchIndex;
+        }
+
+        HSLogger.log(
+            `corruptionQuickbar: refresh current=${JSON.stringify(current)} next=${JSON.stringify(next)} currentMatches=${JSON.stringify(
+                currentMatches.map((index) => ({ index: index + 1, name: this.#loadouts[index]?.name ?? '' }))
+            )} nextMatches=${JSON.stringify(
+                nextMatches.map((index) => ({ index: index + 1, name: this.#loadouts[index]?.name ?? '' }))
+            )} chosenCurrent=${currentMatchIndex !== null ? currentMatchIndex + 1 : 'none'} chosenNext=${nextMatchIndex !== null ? nextMatchIndex + 1 : 'none'} same=${sameCorruption}`,
+            this.context
+        );
 
         this.container.classList.toggle('hs-corruption-current-unknown', !matchedCurrent);
         this.container.classList.toggle('hs-corruption-next-unknown', !matchedNext);
+    }
+
+    #getMatchingLoadoutIndexes(levels: HSCorruptionLevels): number[] {
+        const matches: number[] = [];
+
+        this.#loadouts.forEach((loadout, index) => {
+            if (HSCorruption.matches(loadout.levels, levels)) {
+                matches.push(index);
+            }
+        });
+
+        return matches;
+    }
+
+    #pickPreferredMatchIndex(matches: number[], ...preferredIndexes: Array<number | null>): number | null {
+        for (const preferredIndex of preferredIndexes) {
+            if (preferredIndex !== null && matches.includes(preferredIndex)) {
+                return preferredIndex;
+            }
+        }
+
+        return matches[0] ?? null;
     }
 
     /** Display current and next corruption level strings under summary. */
