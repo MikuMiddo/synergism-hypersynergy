@@ -775,22 +775,12 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
             const wantOn = !allOn;
             HSLogger.log(`automationQuickBar: ${ariaLabel} click wantOn=${wantOn} targets=${targets.length}`, this.context);
-            HSLogger.log(`automationQuickBar: ${ariaLabel} targetSummary=${JSON.stringify(targets.map((t, idx) => ({
-                sel: t.sel,
-                isOn: states[idx],
-                text: this.#normalizeToggleText(t.el.textContent || ''),
-                display: t.el.style.display || '',
-                className: String(t.el.className || '')
-            })))}`, this.context);
 
             targets.forEach((t, idx) => {
                 if (!t.el) return;
                 const currentlyOn = states[idx];
                 if (wantOn !== currentlyOn) {
-                    HSLogger.log(`automationQuickBar: clicking ${t.sel} currentlyOn=${currentlyOn} wantOn=${wantOn} text="${this.#normalizeToggleText(t.el.textContent || '')}"`, this.context);
                     try { t.el.click(); } catch (e) { HSLogger.log(`Failed to click ${t.sel}: ${e}`, this.context); }
-                } else {
-                    HSLogger.log(`automationQuickBar: skipping ${t.sel} currentlyOn=${currentlyOn} wantOn=${wantOn}`, this.context);
                 }
             });
 

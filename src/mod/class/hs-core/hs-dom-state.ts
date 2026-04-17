@@ -176,10 +176,14 @@ export class HSDOMState {
     static isCheapestMode(selector: string, el: HTMLElement | null): boolean {
         const player = this.getPlayer();
         if (selector === '#toggleautoresearchmode' && player) {
-            return String(player.autoResearchMode ?? '').toLowerCase() === 'cheapest';
+            const mode = String(player.autoResearchMode ?? '').toLowerCase();
+            if (mode.includes('cheap') || mode.includes('cost') || mode.includes('spend')) return true;
+            if (mode.includes('manual')) return false;
+            return mode === 'cheapest';
         }
 
         const text = this.normalizeText(el?.textContent || '');
+        if (/花费|花費|cost|spend/i.test(text)) return true;
         return /cheapest|最便宜|最低/i.test(text);
     }
 
